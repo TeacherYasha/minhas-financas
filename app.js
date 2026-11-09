@@ -81,7 +81,7 @@
     if(!description || !Number.isFinite(cents) || cents<=0 || cents>100000000000 || !/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isInteger(installments)||installments<1||installments>60||(recurring&&installments>1))throw Error('Confira a descrição, o valor, a data e o número de parcelas.');
     const scope=entryKind==='Entrada'?'Casa':$('#scope').value,person=scope==='Pessoal'?$('#person').value:'';
     const payer=$('#payer').value,payment=$('#payment').value,quantity=$('#quantity').value.trim();
-    if(!payer || !payment || (scope==='Pessoal'&&!person))throw Error('Informe quem pagou, a forma de pagamento e, para gastos pessoais, de quem é a despesa.');
+    if(!payer || !payment || (scope==='Pessoal'&&!person))throw Error('Informe quem pagou ou recebeu, a forma de pagamento e, para gastos pessoais, de quem é a despesa.');
     return {description,cents,due,installments,recurring,category:$('#category').value,settled:$('#settled').checked,payer,payment,scope,person,quantity};
   }
   function makeRow({id,description,cents,due,category,settled,installment,installments,group,recurring,registered,created,payer,payment,scope,person,quantity,by}) {
@@ -123,7 +123,7 @@
       record=entries.find(e=>e.id===id);if(!record)return;entryKind=record.type;
       $('#description').value=record.description;$('#amount').value=(record.cents/100).toFixed(2);$('#dueDate').value=record.due;
       $('#recurring').checked=record.recurring;$('#installments').value=record.installments||1;$('#settled').checked=record.status!=='Pendente';
-      $('#scope').value=record.scope;$('#person').value=record.person;$('#payer').value=['Crispim','Yasha'].includes(record.payer)?record.payer:'';
+      $('#scope').value=record.scope;$('#person').value=record.person;$('#payer').value=['Crispim','Yasha','Ambos'].includes(record.payer)?record.payer:'';
       $('#payment').value=record.payment||'Não informado';$('#quantity').value=record.quantity;
     } else if(page==='personal'){$('#person').value=isYashaAccount()?'Yasha':'Crispim';}
     setKind(entryKind);
@@ -202,6 +202,7 @@
     $('#personalPersonFilter').addEventListener('change',render);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden && authValid() && profile)loadRows().catch(()=>{});});
   }
+  $('#payer').add(new Option('Ambos','Ambos'));
   $('#payment').prepend(new Option('Selecione...',''));$('#payment').required=true;
   attach();setKind('Saída');$('#dueDate').value=nowISO();render();
   if(!CONFIG.GOOGLE_CLIENT_ID||CONFIG.GOOGLE_CLIENT_ID.startsWith('CONFIGURAR_')){$('#loginHint').textContent='Aguardando configuração do login Google para ativar o site.';$('#loginButton').disabled=true;}
