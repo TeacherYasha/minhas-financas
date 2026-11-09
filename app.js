@@ -95,7 +95,7 @@
           if(!email)throw Error('O Google não informou o e-mail da conta. Tente entrar novamente e autorize o acesso ao perfil.');
           if(profile.email_verified!==true)throw Error(`O Google não confirmou o e-mail ${email}. Confira sua conta Google.`);
           if(!allowed.has(email))throw Error(`A conta selecionada foi ${email}, que não está na lista da família. Escolha um dos três e-mails autorizados.`);
-          await loadSheetTabId();await loadRows();await loadShoppingLists().catch(error=>{console.warn('Listas de compras indisponíveis:',error.message);});saveRememberedEmail(email);showLoggedIn();toast(`Bem-vindo(a), ${profile.given_name||'família'}!`);
+          await loadSheetTabId();await loadRows();await loadShoppingLists().catch(error=>{console.warn('Registros de compras indisponíveis:',error.message);});saveRememberedEmail(email);showLoggedIn();toast(`Bem-vindo(a), ${profile.given_name||'família'}!`);
         }catch(error){showLoggedOut();toast(error.message||'Não foi possível entrar.',true);}
       }});
       const email=forceAccountSelection?'':rememberedEmail();
@@ -205,37 +205,37 @@
     updateShoppingTotals();
   }
   function shoppingNewList(){
-    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da lista atual?'))return;
-    shoppingDraft={row:null,id:makeId(),title:'Mercado da semana',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
+    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return;
+    shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
     shoppingDirty=true;shoppingRevision++;
     renderShopping();$('#shoppingTitle').focus();$('#shoppingTitle').select();
   }
   function shoppingSelect(id){
     if(shoppingDraft?.id===id)return;
-    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da lista atual?'))return;
+    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return;
     const found=shoppingLists.find(list=>list.id===id);if(!found)return;
     shoppingDraft=cloneShopping(found);shoppingDirty=false;renderShopping();
   }
   function shoppingDuplicate(){
     if(!shoppingDraft)return;
-    if(shoppingDirty&&!confirm('Duplicar agora? As alterações não salvas da lista atual serão descartadas.'))return;
+    if(shoppingDirty&&!confirm('Reutilizar os produtos? As alterações não salvas da compra atual serão descartadas.'))return;
     shoppingDraft={...cloneShopping(shoppingDraft),id:makeId(),row:null,title:`${shoppingDraft.title.replace(/\s*\(cópia\)$/i,'').slice(0,89)} (cópia)`,date:nowISO(),status:'Planejada',expenseId:'',createdBy:profile?.email||'',updated:'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),items:shoppingDraft.items.filter(item=>item.name.trim()).map(item=>({...item,id:makeId(),bought:false}))};
     if(!shoppingDraft.items.length)shoppingDraft.items.push(blankShoppingItem());
-    shoppingDirty=true;shoppingRevision++;renderShopping();toast('Lista duplicada! Confira a data e salve quando estiver pronta.');
+    shoppingDirty=true;shoppingRevision++;renderShopping();toast('Novo registro criado com os produtos da compra anterior. Confira os valores e salve.');
   }
   function shoppingRow(list){return [list.id,list.title,list.date,list.status,JSON.stringify(list.items),list.expenseId||'',list.updated||new Date().toISOString(),list.createdBy||profile.email,list.payer||'',list.payment||'',list.purchasedDate||''];}
   function validateShopping(list){
-    if(!list||!list.title.trim()||list.title.length>100||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(list.date))throw Error('Informe o nome e a data prevista da lista.');
-    if(list.items.length>100)throw Error('Esta lista permite até 100 produtos. Crie outra lista para os demais.');
+    if(!list||!list.title.trim()||list.title.length>100||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(list.date))throw Error('Informe a identificação da compra e a data do cadastro.');
+    if(list.items.length>100)throw Error('Cada compra permite até 100 produtos. Crie outro registro para os demais.');
     for(const item of list.items){
       if(!item.name.trim())continue;
       if(item.name.length>120||!Number.isFinite(item.qty)||item.qty<=0||item.qty>100000||item.unitCents!==null&&(!Number.isSafeInteger(item.unitCents)||item.unitCents<0||item.unitCents>1000000000))throw Error(`Confira a quantidade e o preço de "${item.name}".`);
     }
-    if(JSON.stringify(list.items).length>45000)throw Error('Lista muito grande. Divida os produtos em duas listas.');
+    if(JSON.stringify(list.items).length>45000)throw Error('Muitos produtos neste registro. Divida-os em duas compras.');
   }
   async function shoppingSave(silent=false){
     if(!shoppingDraft||shoppingSaving)return false;
-    if(shoppingDraft.status==='Finalizada')throw Error('Uma compra finalizada não pode ser alterada. Duplique para criar outra lista.');
+    if(shoppingDraft.status==='Finalizada')throw Error('Uma compra registrada não pode ser alterada nesta tela. Reutilize os produtos em um novo registro.');
     const list=cloneShopping(shoppingDraft);list.title=$('#shoppingTitle').value.trim();list.date=$('#shoppingDate').value;
     list.payer=$('#shoppingPayer').value;list.payment=$('#shoppingPayment').value;list.purchasedDate=$('#shoppingPurchaseDate').value;
     list.items=list.items.filter(item=>item.name.trim());validateShopping(list);
@@ -253,13 +253,13 @@
       if(row){
         const current=await googleRequest(`${shoppingRangeURL(`A${row}:K${row}`)}?valueRenderOption=UNFORMATTED_VALUE`);
         const currentData=current.values?.[0];
-        if(!currentData||String(currentData[0])!==list.id)throw Error('Esta lista mudou de posição na planilha. Atualize as listas antes de salvar.');
-        if(String(currentData[3]||'')==='Finalizada'||String(currentData[5]||''))throw Error('Esta compra já foi finalizada em outro dispositivo. Atualize as listas.');
-        if(list.row&&String(currentData[6]||'')!==String(shoppingDraft.updated||''))throw Error('Esta lista foi alterada em outro dispositivo. Atualize as listas para não sobrescrever as compras da família.');
+        if(!currentData||String(currentData[0])!==list.id)throw Error('Este registro mudou de posição na planilha. Atualize as compras antes de salvar.');
+        if(String(currentData[3]||'')==='Finalizada'||String(currentData[5]||''))throw Error('Esta compra já foi registrada em outro dispositivo. Atualize as compras.');
+        if(list.row&&String(currentData[6]||'')!==String(shoppingDraft.updated||''))throw Error('Esta compra foi alterada em outro dispositivo. Atualize os registros para não sobrescrever os dados da família.');
         await googleRequest(`${shoppingRangeURL(`A${row}:K${row}`)}?valueInputOption=RAW`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
       }else{
         const response=await googleRequest(`${shoppingRangeURL('A:K')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
-        const match=String(response?.updates?.updatedRange||'').match(/![A-Z]+(\d+):/);if(!match)throw Error('A lista foi enviada, mas não foi possível confirmar a linha. Atualize antes de tentar novamente.');
+        const match=String(response?.updates?.updatedRange||'').match(/![A-Z]+(\d+):/);if(!match)throw Error('O registro foi enviado, mas não foi possível confirmar a linha. Atualize antes de tentar novamente.');
         row=Number(match[1]);
       }
       list.row=row;
@@ -270,14 +270,14 @@
         shoppingDraft.row=row;shoppingDraft.updated=list.updated;
         if(shoppingRevision===revision){shoppingDraft=cloneShopping(list);shoppingDirty=false;}
       }
-      renderShopping();if(!silent)toast('Lista salva na Planilha Google.');return true;
-    }catch(error){if(!silent)toast(error.message||'Não foi possível salvar a lista.',true);throw error;}
-    finally{shoppingSaving=false;$('#shoppingSave').disabled=false;$('#shoppingSave').textContent='Salvar lista';}
+      renderShopping();if(!silent)toast('Produtos salvos na Planilha Google. Para contabilizar o gasto, registre a compra nas finanças.');return true;
+    }catch(error){if(!silent)toast(error.message||'Não foi possível salvar os produtos.',true);throw error;}
+    finally{shoppingSaving=false;$('#shoppingSave').disabled=false;$('#shoppingSave').textContent='Salvar produtos';}
   }
   function updateShoppingTotals(){
     if(!shoppingDraft)return;
     const {named,bought,estimated,actual}=shoppingTotals(shoppingDraft);
-    $('#shoppingProgress').textContent=`${bought.length} de ${named.length} comprados`;
+    $('#shoppingProgress').textContent=`${bought.length} de ${named.length} adquiridos`;
     $('#shoppingEstimated').textContent=money(estimated);
     $('#shoppingActual').textContent=money(actual);
     $('#shoppingFinish').disabled=shoppingSaving||shoppingDraft.status==='Finalizada'||!bought.length;
@@ -301,19 +301,19 @@
       remove.addEventListener('click',()=>{list.items=list.items.filter(i=>i.id!==item.id);shoppingRenderItems();shoppingChanged();});
       row.append(boughtWrap,name,qty,price,sub,remove);container.append(row);
     }
-    if(!list.items.length)container.append(createCell('p','Sua lista está vazia. Adicione um produto para começar.','shopping-no-items'));
+    if(!list.items.length)container.append(createCell('p','Nenhum produto informado. Adicione um item desta compra.','shopping-no-items'));
     updateShoppingTotals();
   }
   function renderShopping(){
     $('#shoppingOpenCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').length+(shoppingDraft&&!shoppingDraft.row&&shoppingDraft.status!=='Finalizada'?1:0));
     $('#shoppingPendingCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').reduce((sum,l)=>sum+l.items.filter(i=>i.name.trim()&&!i.bought).length,0));
     $('#shoppingFinishedCount').textContent=String(shoppingLists.filter(l=>l.status==='Finalizada').length);
-    $('#shoppingListCount').textContent=`${shoppingLists.length} ${shoppingLists.length===1?'lista':'listas'}`;
+    $('#shoppingListCount').textContent=`${shoppingLists.length} ${shoppingLists.length===1?'compra':'compras'}`;
     const rail=$('#shoppingListCards');rail.replaceChildren();
-    if(!shoppingLists.length)rail.append(createCell('p','Nenhuma lista salva ainda.','shopping-rail-empty'));
+    if(!shoppingLists.length)rail.append(createCell('p','Nenhuma compra cadastrada ainda.','shopping-rail-empty'));
     for(const list of shoppingLists){
       const {named,bought,estimated}=shoppingTotals(list),button=createCell('button',null,`shopping-list-card${shoppingDraft?.id===list.id?' selected':''}`);button.type='button';
-      const title=createCell('strong',list.title),badge=createCell('span',list.status==='Finalizada'?'✓ Finalizada':`${bought.length}/${named.length} itens`,'shopping-list-badge');
+      const title=createCell('strong',list.title),badge=createCell('span',list.status==='Finalizada'?'✓ Registrada':`${bought.length}/${named.length} adquiridos`,'shopping-list-badge');
       const meta=createCell('small',`${dateLabel(list.status==='Finalizada'?(list.purchasedDate||list.date):list.date)} · ${money(estimated)}`);
       button.append(title,badge,meta);button.addEventListener('click',()=>shoppingSelect(list.id));rail.append(button);
     }
@@ -325,9 +325,9 @@
     for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked;
     $('#shoppingAddItem').disabled=locked;$('#shoppingSave').disabled=locked||shoppingSaving;$('#shoppingFinish').disabled=locked||shoppingSaving;
     $('#shoppingDuplicate').disabled=false;
-    $('#shoppingSavedStatus').textContent=locked?'✓ Compra finalizada':shoppingDirty?'Alterações ainda não salvas':'✓ Sincronizada com o Google';
+    $('#shoppingSavedStatus').textContent=locked?'✓ Compra lançada nas finanças':shoppingDirty?'Alterações ainda não salvas':'✓ Produtos salvos no Google';
     $('#shoppingSavedStatus').classList.toggle('unsaved',shoppingDirty&&!locked);
-    $('#shoppingFinish').textContent=locked?'✓ Compra já registrada':'✓ Finalizar e lançar despesa';
+    $('#shoppingFinish').textContent=locked?'✓ Compra já registrada':'✓ Registrar compra nas finanças';
     shoppingRenderItems();
   }
   const shoppingCell=value=>({userEnteredValue:typeof value==='number'?{numberValue:value}:{stringValue:String(value??'')}});
@@ -337,11 +337,11 @@
       // Salvar confirma a linha real da lista antes de preparar a transação da compra.
       if(shoppingDirty||!shoppingDraft.row)await shoppingSave(true);
       const list=cloneShopping(shoppingDraft),{bought,actual}=shoppingTotals(list);
-      if(!bought.length)throw Error('Marque pelo menos um produto como comprado.');
+      if(!bought.length)throw Error('Marque pelo menos um produto adquirido nesta compra.');
       if(bought.some(item=>item.unitCents===null||!Number.isFinite(item.unitCents)||!Number.isFinite(item.qty)||item.qty<=0))throw Error('Preencha a quantidade e o preço de todos os produtos marcados.');
       if(!Number.isSafeInteger(actual)||actual<=0||actual>100000000000)throw Error('Confira os preços. O total precisa ser maior que zero.');
       if(!list.payer||!list.payment||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(list.purchasedDate))throw Error('Informe quem pagou, a forma de pagamento e a data da compra.');
-      if(!confirm(`Finalizar a compra "${list.title}"?\n\n${bought.length} produtos comprados\nTotal: ${money(actual)}\n\nSerá criado UM lançamento de despesa. Essa ação não pode ser desfeita pela lista.`))return;
+      if(!confirm(`Registrar a compra "${list.title}" nas finanças?\n\n${bought.length} produtos adquiridos\nTotal pago: ${money(actual)}\n\nSerá criado UM lançamento de despesa. Depois, os produtos ficarão apenas para consulta.`))return;
       shoppingSaving=true;$('#shoppingFinish').disabled=true;$('#shoppingSave').disabled=true;
       await loadSheetTabId();
       // Revalidar os IDs diretamente na planilha impede repetição por atualização de página/reenvio.
@@ -362,7 +362,7 @@
       await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})});
       shoppingDraft=cloneShopping(finished);shoppingDirty=false;
       const idx=shoppingLists.findIndex(l=>l.id===list.id);if(idx>=0)shoppingLists[idx]=cloneShopping(finished);
-      await loadRows();renderShopping();toast(`Compra finalizada! ${money(actual)} registrado em uma única despesa.`);
+      await loadRows();renderShopping();toast(`Compra registrada! ${money(actual)} lançado em uma única despesa.`);
     }catch(error){toast(error.message||'Não foi possível finalizar a compra.',true);}
     finally{shoppingSaving=false;if(shoppingDraft)renderShopping();}
   }
@@ -434,16 +434,16 @@
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
     const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
-    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',shopping:'Listas de compras',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
-    const crumbs={overview:'Visão geral',entries:'Lançamentos',shopping:'Lista de compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
-    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',shopping:'Planeje e conclua as compras da família',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
-    const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',shopping:'Sua lista, tudo no lugar 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
-    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',shopping:'Monte o carrinho da semana e leve todos os itens em um único lançamento.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
+    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',shopping:'Compras registradas',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
+    const crumbs={overview:'Visão geral',entries:'Lançamentos',shopping:'Registrar compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
+    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
+    const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
+    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
     $('#recordsSubtitle').textContent=subtitles[page];
     $('#pageTitle').textContent=headings[page];
     $('#pageSubtitle').textContent=descriptions[page];
-    document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',shopping:'SEU CARRINHO SEMANAL',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
+    document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',shopping:'CADASTRO DE COMPRAS REALIZADAS',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
     $('#shoppingPanel').classList.toggle('hidden',page!=='shopping');
     $('.period-bar').classList.toggle('hidden',page==='shopping');
