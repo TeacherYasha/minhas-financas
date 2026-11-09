@@ -19,7 +19,7 @@
   const PERSONAL_CATEGORIES = ['Cabelo / Barbeiro','Unhas / Beleza','Cuidados pessoais','Saúde','Vestuário','Lazer','Outros pessoais'];
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
-  let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null;
+  let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -76,7 +76,7 @@
     if(shoppingDraft&&!shoppingDirty){const found=shoppingLists.find(item=>item.id===shoppingDraft.id);if(found)shoppingDraft={...found,items:found.items.map(item=>({...item}))};}
     if(page==='shopping')renderShopping();
   }
-  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];shoppingLists=[];shoppingDraft=null;shoppingDirty=false;clearTimeout(shoppingSaveTimer);clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);navSequence++;$('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');updateLoginOptions();}
+  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];shoppingLists=[];shoppingDraft=null;shoppingDirty=false;clearTimeout(shoppingSaveTimer);clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;$('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');$('#routeCurtain').className='route-curtain';initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');updateLoginOptions();}
   function showLoggedIn() {$('#login').classList.add('hidden');$('#app').classList.remove('hidden');const name=profile?.name||profile?.email?.split('@')[0]||'Família';$('#sideName').textContent=name.split(' ')[0];$('#sideAvatar').textContent=name.charAt(0).toUpperCase();$('#userAvatar').textContent=name.charAt(0).toUpperCase();requestAnimationFrame(()=>syncNavIndicator(true));}
   function isYashaAccount() {return ['yashasantos10@gmail.com','yashamsantos@gmail.com'].includes(String(profile?.email||'').trim().toLowerCase());}
   async function login(forceAccountSelection=false) {
@@ -424,6 +424,10 @@
     overview:['#2c513c','#c9f292'],entries:['#244c61','#86dafa'],shopping:['#235246','#a6f7d7'],
     installments:['#493c62','#d7a8ff'],recurring:['#554330','#ffd29a'],personal:['#553a54','#f6bbdf']
   };
+  const routeLabels={
+    overview:['◫','Visão geral'],entries:['≡','Lançamentos'],shopping:['🛒','Registrar compras'],
+    installments:['▦','Parcelamentos'],recurring:['◷','Contas fixas'],personal:['♡','Gastos pessoais']
+  };
   function syncNavIndicator(immediate=false){
     const nav=$('#nav'),active=nav.querySelector('.nav-link.active');
     if(!active||!active.offsetHeight)return;
@@ -478,9 +482,10 @@
     links.forEach(link=>link.classList.toggle('active',link.dataset.page===next));
     syncNavIndicator();
     $('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');
-    const content=$('.main-content');
-    clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);
-    content.classList.remove('page-leaving','page-pre-enter','page-entering');
+    const content=$('.main-content'),curtain=$('#routeCurtain');
+    const activeCurtain=curtain.classList.contains('is-active');
+    clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);
+    content.classList.remove('page-pre-enter','page-entering');
     const sequence=++navSequence;
     const swap=()=>{
       if(sequence!==navSequence)return;
@@ -493,13 +498,38 @@
       void content.offsetWidth; // força o estado inicial para a transição CSS ser visível
       content.classList.remove('page-pre-enter');
       content.classList.add('page-entering');
-      revealPageDetails(next);
-      navCleanTimer=setTimeout(()=>{if(sequence===navSequence)content.classList.remove('page-entering');},560);
+      curtain.classList.remove('is-covering');
+      curtain.classList.add('is-revealing');
+      navDetailTimer=setTimeout(()=>{if(sequence===navSequence)revealPageDetails(next);},160);
+      navCleanTimer=setTimeout(()=>{
+        if(sequence!==navSequence)return;
+        content.classList.remove('page-entering');curtain.className='route-curtain';
+      },600);
     };
-    if(page===next)return;
-    if(reducedMotion()){swap();return;}
+    if(page===next){
+      curtain.className='route-curtain';
+      content.classList.remove('page-leaving','page-pre-enter','page-entering');
+      return;
+    }
+    if(reducedMotion()){
+      curtain.className='route-curtain';
+      content.classList.remove('page-leaving','page-pre-enter','page-entering');
+      swap();return;
+    }
+    const [icon,label]=routeLabels[next];
+    $('#routeCurtainIcon').textContent=icon;
+    $('#routeCurtainLabel').textContent=label;
+    curtain.style.setProperty('--route-accent',navTheme[next][1]);
     content.classList.add('page-leaving');
-    navSwapTimer=setTimeout(swap,225);
+    if(activeCurtain){
+      curtain.classList.remove('is-revealing');curtain.classList.add('is-covering');
+      navSwapTimer=setTimeout(swap,180);
+    }else{
+      curtain.className='route-curtain is-active';
+      void curtain.offsetWidth;
+      curtain.classList.add('is-covering');
+      navSwapTimer=setTimeout(swap,350);
+    }
   }
   function render(){
     $('#monthLabel').textContent=monthLabel(month);$('#summaryMonth').textContent=monthLabel(month);
