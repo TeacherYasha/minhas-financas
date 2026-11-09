@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b111b" />
+  <meta name="description" content="Painel financeiro da família: receitas, despesas, parcelas e contas." />
+  <title>Minhas Finanças — Família</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <section id="login" class="login-screen">
+    <div class="login-glow"></div>
+    <div class="login-card">
+      <div class="brand-mark">⌂</div>
+      <div class="overline">NOSSO CANTINHO FINANCEIRO</div>
+      <h1>Minhas <em>Finanças.</em></h1>
+      <p>Seu dinheiro em ordem. Sua casa em equilíbrio.</p>
+      <div class="login-illustration"><div class="illustration-circle">↗</div><div class="illustration-line"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <button id="loginButton" class="button main-button"><span class="google-g">G</span> Entrar com minha conta Google</button>
+      <p id="loginHint" class="login-hint">Acesso exclusivo para as contas autorizadas da família.</p>
+      <div class="login-footer">🔒 Os registros são armazenados na Planilha Google privada.</div>
+    </div>
+  </section>
+  <div id="app" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-brand" href="#" aria-label="Início"><span class="brand-mark small">⌂</span><span><strong>minhas<em>finanças</em></strong><small>CONTROLE DA CASA</small></span></a>
+      <div class="menu-caption">MENU PRINCIPAL</div>
+      <nav id="nav">
+        <button class="nav-link active" data-page="overview">◫ <span>Visão geral</span></button>
+        <button class="nav-link" data-page="entries">≡ <span>Lançamentos</span></button>
+        <button class="nav-link" data-page="installments">▦ <span>Parcelamentos</span></button>
+        <button class="nav-link" data-page="recurring">◷ <span>Contas fixas</span></button>
+      </nav>
+      <div class="side-bottom"><div class="security-card"><span>✓</span><div><strong>Dados protegidos</strong><small>Acesso via Google</small></div></div><div class="side-account"><span class="avatar" id="sideAvatar">F</span><div><strong id="sideName">Família</strong><small>Conta autorizada</small></div><button id="logout" title="Sair">↪</button></div></div>
+    </aside>
+    <div id="mobileBackdrop" class="mobile-backdrop hidden"></div>
+    <main class="workspace">
+      <header class="topbar"><div class="breadcrumb"><button id="menuToggle" aria-label="Abrir menu">☰</button><span>Início</span><span class="crumb-sep">/</span><strong id="crumb">Visão geral</strong></div><div class="top-right"><span class="online"><i></i> Conectado ao Google</span><span id="userAvatar" class="avatar">F</span></div></header>
+      <div class="main-content">
+        <div class="headline"><div><span class="overline">SEU PAINEL FINANCEIRO</span><h1 id="pageTitle">Bem-vindo às suas finanças <span>✦</span></h1><p id="pageSubtitle">Uma visão clara de tudo que acontece com o dinheiro da casa.</p></div><button id="newEntry" class="button main-button">＋ Novo lançamento</button></div>
+        <div class="period-bar"><span>▦ &nbsp; Período de análise</span><div class="period-control"><button id="prevMonth" aria-label="Mês anterior">‹</button><strong id="monthLabel"></strong><button id="nextMonth" aria-label="Próximo mês">›</button></div><button id="currentMonth" class="text-action">Mês atual</button><button id="refresh" class="text-action refresh">↻ Atualizar</button></div>
+        <section class="kpis"><article class="kpi balance"><div class="kpi-top">SALDO REAL ACUMULADO <span>◉</span></div><h2 id="realBalance">R$ 0,00</h2><div class="kpi-note"><b>✓ Efetivado</b> Recebido menos pago</div></article><article class="kpi"><div class="kpi-top">ENTRADAS DO MÊS <span class="icon green">↙</span></div><h2 id="incomeTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot green"></i> Receitas previstas</div></article><article class="kpi"><div class="kpi-top">SAÍDAS DO MÊS <span class="icon orange">↗</span></div><h2 id="expenseTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot orange"></i> Despesas previstas</div></article><article class="kpi"><div class="kpi-top">CONTAS A PAGAR <span class="icon purple">▤</span></div><h2 id="pendingTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot purple"></i> Pendências deste mês</div></article></section>
+        <div class="insights"><section class="panel categories"><div class="panel-head"><div><h3>Despesas por categoria</h3><p>Para onde está indo o dinheiro</p></div><span id="categoryCount" class="chip">0 categorias</span></div><div class="chart-body"><div class="donut" id="donut"><div><small>DESPESAS DO MÊS</small><strong id="chartTotal">R$ 0,00</strong></div></div><div id="categoryLegend" class="legend"></div></div></section><section class="panel summary"><div class="panel-head"><div><h3>Resumo mensal</h3><p>O que entra e o que sai</p></div><span class="chip" id="summaryMonth"></span></div><div class="summary-result"><span>Resultado previsto</span><strong id="forecast">R$ 0,00</strong></div><div class="summary-progress"><span id="incomeBar"></span></div><div class="summary-labels"><span><i class="dot green"></i> Entradas</span><span><i class="dot orange"></i> Saídas</span></div><div class="panel-divider"></div><strong class="quick-title">Acesso rápido</strong><div class="quick-buttons"><button id="newIncome"><span>↙</span> Receita ＋</button><button id="newExpense"><span>↗</span> Despesa ＋</button></div><p class="sync-note">↻ &nbsp; Os lançamentos ficam sincronizados entre vocês dois.</p></section></div>
+        <section class="panel records"><div class="panel-head records-head"><div><h3 id="recordsTitle">Lançamentos do mês</h3><p id="recordsSubtitle">Acompanhe e organize seus registros</p></div><div class="record-tools"><input id="search" type="search" placeholder="Buscar lançamento..." aria-label="Buscar lançamento"/><span id="recordCount" class="chip">0 registros</span></div></div><div class="table-scroll"><table><thead><tr><th>DESCRIÇÃO</th><th>CATEGORIA</th><th>DATA</th><th>VALOR</th><th>SITUAÇÃO</th><th>AÇÕES</th></tr></thead><tbody id="recordBody"></tbody></table><div id="emptyRecords" class="empty-records"><span>▤</span><strong>Nenhum lançamento neste mês</strong><p>Comece adicionando uma receita ou despesa.</p><button id="emptyAdd" class="subtle-button">＋ Adicionar lançamento</button></div></div></section>
+        <footer>Minhas Finanças &nbsp;•&nbsp; Nosso lar, nossas conquistas.</footer>
+      </div>
+    </main>
+  </div>
+  <div id="modalBackdrop" class="modal-backdrop hidden"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="overline">ORGANIZE SEU DINHEIRO</span><h2 id="modalTitle">Novo lançamento</h2></div><button id="closeModal" aria-label="Fechar">✕</button></div><form id="entryForm"><div class="kind-toggle"><button type="button" id="typeExpense" class="selected">↗ Despesa</button><button type="button" id="typeIncome">↙ Receita</button></div><label>Descrição<input name="description" id="description" maxlength="120" placeholder="Ex.: Compras no mercado" required/></label><div class="field-grid"><label>Valor total (R$)<input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0,00"/></label><label>Categoria<select id="category" name="category"></select></label></div><div class="field-grid"><label>Vencimento / data<input type="date" name="dueDate" id="dueDate" required/></label><label>Quantidade de parcelas<input type="number" name="installments" id="installments" min="1" max="60" value="1" required/></label></div><label class="checkbox-row"><input type="checkbox" id="recurring"/> Repetir mensalmente <small>(próximos 24 meses)</small></label><label class="checkbox-row"><input type="checkbox" id="settled"/> <span id="settledLabel">Já foi pago</span> <small>(somente lançamento único)</small></label><p class="form-help" id="formHelp"></p><div class="modal-actions"><button type="button" id="cancelModal">Cancelar</button><button type="submit" id="saveEntry" class="button main-button">Salvar lançamento</button></div></form></div></div>
+</body>
+</html>
