@@ -64,7 +64,8 @@ form input:focus,form select:focus{box-shadow:0 0 0 3px #a0d88726}
 @keyframes slideToast{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
 @media(max-width:760px){.kpi,.panel{border-radius:17px}.personal-panel{padding:20px 15px}.personal-intro{align-items:start;flex-direction:column}.personal-cards{gap:9px}.personal-card{padding:17px 15px;min-height:117px}.personal-card strong{font-size:21px}.personal-emoji{right:12px;top:9px;font-size:24px}.main-content>.headline,.kpis,.insights,.records,.personal-panel{animation-duration:.3s}}
 @media(max-width:390px){.personal-cards{grid-template-columns:1fr}.personal-card{min-height:94px}.personal-card strong{font-size:22px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){body:not(.motion-enabled) *,body:not(.motion-enabled) *::before,body:not(.motion-enabled) *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+body.motion-disabled *,body.motion-disabled *::before,body.motion-disabled *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 
 /* Legenda mais legível e com mais contraste, mantendo o painel escuro. */
 .categories .panel-head h3{font-size:18px;color:#f3f8ff}
@@ -269,9 +270,11 @@ html{scroll-behavior:smooth}
   .main-content .page-reveal{animation-duration:.4s}
 }
 @media(prefers-reduced-motion:reduce){
-  .main-content,.main-content.page-leaving,.main-content.page-pre-enter,.main-content.page-entering{opacity:1!important;transform:none!important;transition:none!important;will-change:auto!important}
-  .main-content .page-reveal{animation:none!important}
+  body:not(.motion-enabled) .main-content,body:not(.motion-enabled) .main-content.page-leaving,body:not(.motion-enabled) .main-content.page-pre-enter,body:not(.motion-enabled) .main-content.page-entering{opacity:1!important;transform:none!important;transition:none!important;will-change:auto!important}
+  body:not(.motion-enabled) .main-content .page-reveal{animation:none!important}
 }
+body.motion-disabled .main-content,body.motion-disabled .main-content.page-leaving,body.motion-disabled .main-content.page-pre-enter,body.motion-disabled .main-content.page-entering{opacity:1!important;transform:none!important;transition:none!important;will-change:auto!important}
+body.motion-disabled .main-content .page-reveal{animation:none!important}
 
 /* Passagem de telas: um painel deslizante identifica a nova aba durante a troca. */
 .route-curtain{position:fixed;left:255px;right:0;top:75px;bottom:0;z-index:23;visibility:hidden;pointer-events:none;overflow:hidden;isolation:isolate;display:grid;place-items:center;--route-accent:#c9f292}
@@ -289,4 +292,12 @@ html{scroll-behavior:smooth}
 .route-curtain-track i{display:block;height:100%;width:0;border-radius:inherit;background:var(--route-accent);box-shadow:0 0 12px var(--route-accent);transition:width .34s ease-in-out}
 .route-curtain.is-covering .route-curtain-track i{width:100%}
 @media(max-width:760px){.route-curtain{left:0;top:64px}.route-curtain-icon{width:59px;height:59px;font-size:31px}.route-curtain-inner>strong{font-size:28px}}
-@media(prefers-reduced-motion:reduce){.route-curtain{display:none!important}}
+@media(prefers-reduced-motion:reduce){body:not(.motion-enabled) .route-curtain{display:none!important}}
+body.motion-disabled .route-curtain{display:none!important}
+
+/* Ajuste individual por navegador: controle visível para ativar/desativar movimento. */
+.motion-toggle{border:1px solid #49685b;border-radius:999px;background:#263d37;color:#c7f7bd;white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.1px;padding:9px 12px;transition:background .2s,border-color .2s,transform .2s}
+.motion-toggle:hover{background:#34584b;border-color:#84c699;transform:translateY(-1px)}
+.motion-toggle[data-active="false"]{background:#443a32;border-color:#82674b;color:#ffd9a3}
+.motion-toggle:focus-visible{outline:2px solid #c9f292;outline-offset:3px}
+@media(max-width:760px){.top-right{gap:10px}.motion-toggle{font-size:10px;padding:9px 10px}}
