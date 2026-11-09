@@ -213,7 +213,8 @@
     }
   }
   function renderRecurring(){
-    const bills=entries.filter(e=>e.recurring&&e.type==='Saída'&&e.due.startsWith(month)).sort((a,b)=>a.due.localeCompare(b.due));
+    const billCategories=new Set(['Contas','Aluguel','Energia','Água','Internet']);
+    const bills=entries.filter(e=>e.type==='Saída'&&e.due.startsWith(month)&&(e.recurring||billCategories.has(e.category))).sort((a,b)=>a.due.localeCompare(b.due));
     const pending=bills.filter(e=>e.status==='Pendente');
     $('#billsCount').textContent=String(bills.length);
     $('#billsTotal').textContent=money(bills.reduce((sum,e)=>sum+e.cents,0));
@@ -222,7 +223,7 @@
     if(!bills.length){emptyFeature(container,'Nenhuma conta fixa neste mês','Adicione aluguel, luz ou outra conta recorrente. Os vencimentos futuros serão organizados automaticamente.','＋ Adicionar conta fixa',newRecurring);return;}
     for(const bill of bills){
       const card=createCell('article',null,`bill-card ${bill.status==='Pendente'?'unpaid':'settled'}`),icon=createCell('div','▤','bill-icon'),info=createCell('div',null,'bill-info');
-      info.append(createCell('small',`${bill.category} · Vence em ${dateLabel(bill.due)}`),createCell('strong',bill.description),createCell('span',bill.status==='Pendente'?'Aguardando pagamento':'Pagamento confirmado'));
+      info.append(createCell('small',`${bill.category} · ${bill.recurring?'Recorrente':'Registrada no mês'} · ${dateLabel(bill.due)}`),createCell('strong',bill.description),createCell('span',bill.status==='Pendente'?'Aguardando pagamento':'Pagamento confirmado'));
       const amount=createCell('strong',money(bill.cents),'bill-amount'),actions=createCell('div',null,'bill-actions');
       const status=createCell('button',bill.status==='Pendente'?'✓ Marcar como pago':'↶ Desfazer','bill-status');status.type='button';status.addEventListener('click',()=>setStatus(bill.id));
       const edit=createCell('button','Editar','bill-edit');edit.type='button';edit.addEventListener('click',()=>openModal(bill.type,bill.id));
