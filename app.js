@@ -18,7 +18,7 @@
   const PERSONAL_CATEGORIES = ['Cabelo / Barbeiro','Unhas / Beleza','Cuidados pessoais','Saúde','Vestuário','Lazer','Outros pessoais'];
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
-  let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], page = 'overview', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false;
+  let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -170,6 +170,70 @@
   }
   function updateFormHints(){const multiple=Number($('#installments').value)>1,rec=$('#recurring').checked;$('#installments').disabled=rec||Boolean(editingId);$('#settled').disabled=(multiple||rec)&&!editingId;$('#formHelp').textContent=editingId?'A alteração será aplicada somente a este registro.':rec?'A conta será criada nos próximos 24 meses.':multiple?'O valor total será dividido automaticamente entre os meses.':'';}
   function createCell(tag,text,className){const el=document.createElement(tag);if(text!==undefined&&text!==null)el.textContent=String(text);if(className)el.className=className;return el;}
+  const dateLabel=(iso)=>/^\d{4}-\d{2}-\d{2}$/.test(iso)?new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR'):iso||'—';
+  function newInstallment(){openModal('Saída');$('#installments').value='2';updateFormHints();}
+  function newRecurring(){openModal('Saída');$('#recurring').checked=true;updateFormHints();}
+  function emptyFeature(container,title,detail,action,onClick){
+    const box=createCell('div',null,'feature-empty');box.append(createCell('strong',title),createCell('p',detail));
+    const button=createCell('button',action,'feature-action');button.type='button';button.addEventListener('click',onClick);box.append(button);container.append(box);
+  }
+  function renderInstallments(){
+    const all=entries.filter(e=>e.installments>1),groups=new Map();
+    for(const entry of all){const key=entry.group||entry.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(entry);}
+    $('#plansCount').textContent=String(groups.size);
+    $('#plansRemaining').textContent=money(all.filter(e=>e.status==='Pendente').reduce((sum,e)=>sum+e.cents,0));
+    $('#plansThisMonth').textContent=money(all.filter(e=>e.status==='Pendente'&&e.due.startsWith(month)).reduce((sum,e)=>sum+e.cents,0));
+    const container=$('#installmentCards');container.replaceChildren();
+    if(!groups.size){emptyFeature(container,'Nenhuma compra parcelada ainda','Cadastre sua primeira compra em parcelas para acompanhar cada vencimento.','＋ Cadastrar parcelamento',newInstallment);return;}
+    const plans=[...groups.values()].map(rows=>{
+      rows.sort((a,b)=>a.installment-b.installment||a.due.localeCompare(b.due));
+      return {rows,next:rows.filter(e=>e.status==='Pendente').sort((a,b)=>a.due.localeCompare(b.due))[0]};
+    }).sort((a,b)=>(a.next?.due||'9999').localeCompare(b.next?.due||'9999'));
+    for(const {rows,next} of plans){
+      const first=rows[0],done=rows.filter(e=>e.status!=='Pendente').length,total=rows.reduce((sum,e)=>sum+e.cents,0),remaining=rows.filter(e=>e.status==='Pendente').reduce((sum,e)=>sum+e.cents,0);
+      const card=createCell('article',null,'plan-card'),header=createCell('div',null,'plan-header'),heading=createCell('div',null,'plan-heading');
+      heading.append(createCell('span',first.category,'plan-category'),createCell('h3',first.description));
+      header.append(heading,createCell('span',done===rows.length?'Concluído':`${done} de ${rows.length} concluídas`,'plan-badge'));card.append(header);
+      const amounts=createCell('div',null,'plan-amounts');
+      const totalBox=createCell('div');totalBox.append(createCell('small','TOTAL DA COMPRA'),createCell('strong',money(total)));
+      const remainingBox=createCell('div');remainingBox.append(createCell('small','AINDA EM ABERTO'),createCell('strong',money(remaining)));
+      amounts.append(totalBox,remainingBox);card.append(amounts);
+      const track=createCell('div',null,'plan-track'),fill=createCell('span');fill.style.width=`${done/rows.length*100}%`;track.append(fill);card.append(track);
+      card.append(createCell('p',next?`Próximo vencimento: ${dateLabel(next.due)} · ${money(next.cents)}`:'Todas as parcelas estão concluídas.','plan-next'));
+      const details=createCell('details',null,'plan-details'),summary=createCell('summary',`Ver todas as parcelas (${rows.length})`);details.append(summary);
+      const list=createCell('div',null,'plan-rows');
+      for(const item of rows){
+        const line=createCell('div',null,'plan-row'),info=createCell('div');
+        info.append(createCell('strong',`Parcela ${item.installment || '—'} · ${money(item.cents)}`),createCell('small',dateLabel(item.due)));
+        const badge=createCell('span',item.status,item.status==='Pendente'?'mini-state pending':'mini-state paid');
+        const button=createCell('button',item.status==='Pendente'?'Confirmar':'Desfazer','mini-action');button.type='button';button.addEventListener('click',()=>setStatus(item.id));
+        line.append(info,badge,button);list.append(line);
+      }
+      details.append(list);card.append(details);container.append(card);
+    }
+  }
+  function renderRecurring(){
+    const bills=entries.filter(e=>e.recurring&&e.type==='Saída'&&e.due.startsWith(month)).sort((a,b)=>a.due.localeCompare(b.due));
+    const pending=bills.filter(e=>e.status==='Pendente');
+    $('#billsCount').textContent=String(bills.length);
+    $('#billsTotal').textContent=money(bills.reduce((sum,e)=>sum+e.cents,0));
+    $('#billsPending').textContent=money(pending.reduce((sum,e)=>sum+e.cents,0));
+    const container=$('#fixedBills');container.replaceChildren();
+    if(!bills.length){emptyFeature(container,'Nenhuma conta fixa neste mês','Adicione aluguel, luz ou outra conta recorrente. Os vencimentos futuros serão organizados automaticamente.','＋ Adicionar conta fixa',newRecurring);return;}
+    for(const bill of bills){
+      const card=createCell('article',null,`bill-card ${bill.status==='Pendente'?'unpaid':'settled'}`),icon=createCell('div','▤','bill-icon'),info=createCell('div',null,'bill-info');
+      info.append(createCell('small',`${bill.category} · Vence em ${dateLabel(bill.due)}`),createCell('strong',bill.description),createCell('span',bill.status==='Pendente'?'Aguardando pagamento':'Pagamento confirmado'));
+      const amount=createCell('strong',money(bill.cents),'bill-amount'),actions=createCell('div',null,'bill-actions');
+      const status=createCell('button',bill.status==='Pendente'?'✓ Marcar como pago':'↶ Desfazer','bill-status');status.type='button';status.addEventListener('click',()=>setStatus(bill.id));
+      const edit=createCell('button','Editar','bill-edit');edit.type='button';edit.addEventListener('click',()=>openModal(bill.type,bill.id));
+      actions.append(status,edit);card.append(icon,info,amount,actions);container.append(card);
+    }
+  }
+  function navigateTo(next){
+    page=next;document.querySelectorAll('.nav-link').forEach(link=>link.classList.toggle('active',link.dataset.page===next));
+    $('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');
+    render();
+  }
   function render(){
     $('#monthLabel').textContent=monthLabel(month);$('#summaryMonth').textContent=monthLabel(month);
     const current=entries.filter(e=>e.due.startsWith(month));const income=current.filter(e=>e.type==='Entrada').reduce((a,e)=>a+e.cents,0);const expense=current.filter(e=>e.type==='Saída').reduce((a,e)=>a+e.cents,0);
@@ -179,22 +243,39 @@
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
     const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
-    const titles={overview:'Lançamentos do mês',entries:'Todos os lançamentos',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
+    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
     const crumbs={overview:'Visão geral',entries:'Lançamentos',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
+    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
+    const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
+    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
-    $('#pageTitle').textContent=page==='overview'?'Bem-vindo às suas finanças ✦':page==='personal'?'Um espaço para cada um ♡':crumbs[page];
-    $('#pageSubtitle').textContent=page==='personal'?'Autocuidado e despesas individuais, com tudo organizado por pessoa.':page==='overview'?'Uma visão clara de tudo que acontece com o dinheiro da casa.':'Acompanhe e organize os compromissos da sua residência.';
+    $('#recordsSubtitle').textContent=subtitles[page];
+    $('#pageTitle').textContent=headings[page];
+    $('#pageSubtitle').textContent=descriptions[page];
+    document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
-    document.querySelector('.kpis').classList.toggle('hidden',page==='personal');
-    document.querySelector('.insights').classList.toggle('hidden',page==='personal');
+    document.querySelector('.kpis').classList.toggle('hidden',page!=='overview');
+    document.querySelector('.insights').classList.toggle('hidden',page!=='overview');
+    $('.records').classList.toggle('hidden',page==='installments'||page==='recurring');
+    $('#entriesPanel').classList.toggle('hidden',page!=='entries');
+    $('#installmentsPanel').classList.toggle('hidden',page!=='installments');
+    $('#recurringPanel').classList.toggle('hidden',page!=='recurring');
+    $('#entriesIncome').textContent=money(income);$('#entriesExpense').textContent=money(expense);$('#entriesCount').textContent=String(current.length);
+    document.querySelectorAll('#entryFilters [data-filter]').forEach(button=>button.classList.toggle('active',button.dataset.filter===entryFilter));
+    if(page==='installments')renderInstallments();
+    if(page==='recurring')renderRecurring();
     const personal=current.filter(e=>e.type==='Saída'&&e.scope==='Pessoal');
     $('#personalCrispimTotal').textContent=money(personal.filter(e=>e.person==='Crispim').reduce((sum,e)=>sum+e.cents,0));
     $('#personalYashaTotal').textContent=money(personal.filter(e=>e.person==='Yasha').reduce((sum,e)=>sum+e.cents,0));
-    let displayed=current.filter(e=>page==='installments'?e.installments>1:page==='recurring'?e.recurring:page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':true);
+    let displayed=current.filter(e=>page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':page==='entries'&&entryFilter!=='all'?e.type===entryFilter:true);
     if(page==='personal'&&$('#personalPersonFilter').value!=='todos')displayed=displayed.filter(e=>e.person===$('#personalPersonFilter').value);
     displayed.sort((a,b)=>b.due.localeCompare(a.due)||b.created.localeCompare(a.created));
-    const query=$('#search').value.trim().toLocaleLowerCase('pt-BR');if(query)displayed=displayed.filter(e=>`${e.description} ${e.category} ${e.payer} ${e.payment} ${e.person}`.toLocaleLowerCase('pt-BR').includes(query));
-    $('#recordCount').textContent=`${displayed.length} registros`;
+    const query=page==='overview'?'':$('#search').value.trim().toLocaleLowerCase('pt-BR');if(query)displayed=displayed.filter(e=>`${e.description} ${e.category} ${e.payer} ${e.payment} ${e.person}`.toLocaleLowerCase('pt-BR').includes(query));
+    const totalDisplayed=displayed.length;
+    if(page==='overview')displayed=displayed.slice(0,6);
+    $('#recordCount').textContent=page==='overview'?`${displayed.length} de ${totalDisplayed} registros`:`${displayed.length} registros`;
+    $('#search').classList.toggle('hidden',page==='overview');
+    $('#viewAllEntries').classList.toggle('hidden',page!=='overview');
     const tbody=$('#recordBody');tbody.replaceChildren();$('#emptyRecords').classList.toggle('hidden',displayed.length>0);
     for(const e of displayed){
       const tr=createCell('tr'),nameTd=createCell('td'),box=createCell('div',null,'record-name'),symbol=createCell('b',e.scope==='Pessoal'?'♡':e.type==='Entrada'?'↙':'↗'),text=createCell('div'),strong=createCell('strong',e.description);
@@ -212,8 +293,11 @@
     }
   }
   function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>openModal());$('#emptyAdd').addEventListener('click',()=>openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
+    $('#addInstallment').addEventListener('click',newInstallment);$('#addRecurring').addEventListener('click',newRecurring);
+    $('#entryFilters').addEventListener('click',event=>{const button=event.target.closest('[data-filter]');if(!button)return;entryFilter=button.dataset.filter;render();});
+    $('#viewAllEntries').addEventListener('click',()=>navigateTo('entries'));
     $('#prevMonth').addEventListener('click',()=>{month=monthShift(month,-1);render();});$('#nextMonth').addEventListener('click',()=>{month=monthShift(month,1);render();});$('#currentMonth').addEventListener('click',()=>{month=currentMonth();render();});$('#refresh').addEventListener('click',async()=>{try{await loadRows(true)}catch(e){toast(e.message,true)}});
-    $('#search').addEventListener('input',render);$('#nav').addEventListener('click',event=>{const b=event.target.closest('[data-page]');if(!b)return;page=b.dataset.page;document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',n===b));$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');render();});
+    $('#search').addEventListener('input',render);$('#nav').addEventListener('click',event=>{const b=event.target.closest('[data-page]');if(!b)return;navigateTo(b.dataset.page);});
     $('#menuToggle').addEventListener('click',()=>{$('#sidebar').classList.add('open');$('#mobileBackdrop').classList.remove('hidden');});$('#mobileBackdrop').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');});
     $('#closeModal').addEventListener('click',closeModal);$('#cancelModal').addEventListener('click',closeModal);$('#modalBackdrop').addEventListener('click',event=>{if(event.target===$('#modalBackdrop'))closeModal();});document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
     $('#entryForm').addEventListener('submit',saveForm);$('#typeExpense').addEventListener('click',()=>setKind('Saída'));$('#typeIncome').addEventListener('click',()=>setKind('Entrada'));$('#scope').addEventListener('change',updateScope);$('#installments').addEventListener('change',updateFormHints);$('#recurring').addEventListener('change',()=>{if($('#recurring').checked)$('#installments').value=1;updateFormHints();});
@@ -222,6 +306,7 @@
   }
   $('#payer').add(new Option('Ambos','Ambos'));
   $('#payment').prepend(new Option('Selecione...',''));$('#payment').required=true;
+  const viewAllButton=createCell('button','Ver todos →','view-all-button');viewAllButton.id='viewAllEntries';viewAllButton.type='button';$('.record-tools').append(viewAllButton);
   attach();updateLoginOptions();setKind('Saída');$('#dueDate').value=nowISO();render();
   if(!CONFIG.GOOGLE_CLIENT_ID||CONFIG.GOOGLE_CLIENT_ID.startsWith('CONFIGURAR_')){$('#loginHint').textContent='Aguardando configuração do login Google para ativar o site.';$('#loginButton').disabled=true;}
 })();
