@@ -223,3 +223,33 @@ form input:focus,form select:focus{box-shadow:0 0 0 3px #a0d88726}
 @media(max-width:760px){.shopping-feature{padding:18px 13px}.shopping-editor{padding:16px 12px}.shopping-editor-top,.shopping-checkout-fields{grid-template-columns:1fr 1fr}.shopping-checkout-fields>label:last-child{grid-column:1/-1}.shopping-actions{align-items:stretch;flex-direction:column}.shopping-actions>div{justify-content:stretch}.shopping-actions>div button{flex:1}.shopping-list-rail{padding:15px}}
 @media(max-width:590px){.shopping-editor-top,.shopping-totals,.shopping-checkout-fields{grid-template-columns:1fr}.shopping-checkout-fields>label:last-child{grid-column:auto}.shopping-items-head{display:none}.shopping-item{grid-template-columns:39px minmax(0,1fr) minmax(72px,.55fr) 30px;gap:8px;padding:12px 3px}.shopping-check-cell{grid-row:1/3;grid-column:1}.shopping-item>input[aria-label="Nome do produto"]{grid-row:1;grid-column:2/4}.shopping-item>input[aria-label="Quantidade"]{grid-row:2;grid-column:2}.shopping-item>input[aria-label="Preço unitário em reais"]{grid-row:2;grid-column:3}.shopping-item-subtotal{grid-column:2/4;grid-row:3;text-align:right;padding-right:4px}.shopping-remove{grid-column:4;grid-row:1}.shopping-items-title{align-items:flex-start;flex-direction:column}.shopping-totals strong{font-size:23px}.shopping-actions>div{flex-direction:column}.shopping-actions>div button{width:100%}.shopping-list-cards{grid-template-columns:1fr 1fr}}
 @media(max-width:415px){.shopping-list-cards{grid-template-columns:1fr}.shopping-list-card{grid-template-columns:1fr auto}}
+
+/* Movimento V3: realce deslizante no menu, feedback tátil e microinterações. */
+#nav{position:relative;isolation:isolate}
+#nav .nav-link{position:relative;z-index:1;overflow:hidden;transform-origin:center;transition:color .3s ease,background-color .3s ease,transform .24s cubic-bezier(.2,.8,.2,1)}
+#nav.nav-has-rail .nav-link.active,#nav.nav-has-rail .nav-link.active:hover{background:transparent;box-shadow:none}
+#nav .nav-link:not(.active):hover{background:#32494388;transform:translateX(5px)}
+#nav .nav-link:active{transform:scale(.965)}
+#nav .nav-link:focus-visible{outline:2px solid #c9f292;outline-offset:-2px}
+.nav-active-rail{position:absolute;left:0;top:0;z-index:0;width:100%;height:var(--nav-rail-height,48px);border-radius:13px;pointer-events:none;background:var(--nav-rail-color,#2c513c);box-shadow:inset 3px 0 var(--nav-rail-accent,#c9f292),0 9px 22px #08130b35;transform:translate3d(0,var(--nav-rail-y,0px),0);opacity:0}
+#nav.nav-motion-ready .nav-active-rail{opacity:1;transition:transform .43s cubic-bezier(.2,.84,.2,1),height .36s cubic-bezier(.2,.84,.2,1),background-color .33s ease,box-shadow .3s ease,opacity .16s ease}
+.nav-ripple{position:absolute;pointer-events:none;z-index:2;width:28px;height:28px;border-radius:50%;background:radial-gradient(circle,#e0ffe176,#c7eea834 60%,transparent 72%);transform:translate(-50%,-50%) scale(0);animation:navRipple .55s ease-out forwards}
+@keyframes navRipple{0%{opacity:.85;transform:translate(-50%,-50%) scale(.1)}100%{opacity:0;transform:translate(-50%,-50%) scale(11)}}
+.headline h1,.headline p,.headline .overline{transition:color .3s ease}
+.feature-stats article,.shopping-totals>div,.personal-card,.bill-card,.plan-card,.shopping-list-rail,.shopping-editor{transition:transform .28s cubic-bezier(.2,.8,.2,1),border-color .28s ease,box-shadow .28s ease,background-color .28s ease}
+.feature-stats article:hover,.shopping-totals>div:hover{transform:translateY(-4px);border-color:#76ba9b;box-shadow:0 16px 26px #050b1748}
+.bill-card:hover{transform:translateX(4px);border-color:#9ecba8;box-shadow:0 10px 26px #060f1c4c}
+.shopping-editor:focus-within{border-color:#648d7b;box-shadow:0 18px 35px #06141b55}
+.feature-action,.shopping-secondary,.shopping-add-item,.view-all-button,.bill-status,.bill-edit,.mini-action,.filter-bar button,.shopping-remove,.login-card .switch-account{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .22s ease,box-shadow .22s ease,border-color .22s ease}
+.feature-action:active,.shopping-secondary:active,.shopping-add-item:active,.view-all-button:active,.bill-status:active,.bill-edit:active,.mini-action:active,.filter-bar button:active,.shopping-remove:active,.main-button:active{transform:scale(.965)!important}
+.feature-action:focus-visible,.shopping-secondary:focus-visible,.shopping-add-item:focus-visible,.view-all-button:focus-visible,.bill-status:focus-visible,.bill-edit:focus-visible,.mini-action:focus-visible,.filter-bar button:focus-visible,.shopping-list-card:focus-visible{outline:2px solid #b6efa9;outline-offset:3px}
+.shopping-list-card:hover{box-shadow:0 10px 22px #071c1b65}
+.plan-track span,.summary-progress span{transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.main-content{transform-origin:top center}
+@media(max-width:760px){
+  .sidebar{transition:left .36s cubic-bezier(.16,1,.3,1)}
+  .mobile-backdrop:not(.hidden){animation:mobileFadeIn .28s ease both}
+  .nav-active-rail{border-radius:12px}
+}
+@keyframes mobileFadeIn{from{opacity:0}to{opacity:1}}
+@media(hover:none){.feature-stats article:hover,.shopping-totals>div:hover,.bill-card:hover{transform:none;box-shadow:none}}
