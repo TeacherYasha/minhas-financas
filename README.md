@@ -47,7 +47,7 @@ O cadastro de uma compra parcelada cria um registro por mês e divide os centavo
 - O GitHub Pages é público, mas **não carrega dados financeiros antes do login**.
 - O e-mail no `config.js` apenas mostra uma mensagem amigável; a proteção efetiva dos dados vem do login Google e da lista de permissões da planilha. Nunca altere a planilha para acesso público.
 - Não adicione senha, token OAuth, chave de serviço ou planilha com lançamentos reais ao repositório.
-- O token de acesso permanece em memória nesta versão. O usuário precisará entrar novamente ao recarregar a página.
+- O token de acesso permanece apenas na memória, sem armazenamento permanente no navegador. Para facilitar o retorno após atualizar a página, o site lembra somente o último e-mail autorizado (armazenado localmente) e oferece um botão de acesso rápido com `login_hint` e `prompt: ''`. O Google ainda exige um clique para emitir um novo token; há a opção **Usar outra conta Google**. Ao sair do site, o e-mail lembrado é removido.
 - Os registros são enviados diretamente para a Google Sheets API. Não há Apps Script público com acesso irrestrito à planilha.
 - Antes de adotar como controle principal da casa, teste com valores fictícios, confira a atualização no celular e computador, e configure backups periódicos da planilha no Drive.
 
