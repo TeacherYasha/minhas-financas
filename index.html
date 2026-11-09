@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261109-6" />
+  <link rel="stylesheet" href="style.css?v=20261109-8" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261109-7" defer></script>
+  <script src="app.js?v=20261109-8" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -37,6 +37,7 @@
       <nav id="nav">
         <button class="nav-link active" data-page="overview">◫ <span>Visão geral</span></button>
         <button class="nav-link" data-page="entries">≡ <span>Lançamentos</span></button>
+        <button class="nav-link" data-page="shopping">🛒 <span>Lista de compras</span></button>
         <button class="nav-link" data-page="installments">▦ <span>Parcelamentos</span></button>
         <button class="nav-link" data-page="recurring">◷ <span>Contas fixas</span></button>
         <button class="nav-link" data-page="personal">♡ <span>Gastos pessoais</span></button>
@@ -65,6 +66,25 @@
           <div class="feature-intro"><div><span class="overline">COMPROMISSOS DA CASA</span><h2>Contas organizadas, mês tranquilo</h2><p>Aluguel, luz, internet e outras despesas que se repetem.</p></div><button type="button" id="addRecurring" class="feature-action">＋ Conta fixa</button></div>
           <div class="feature-stats"><article><span>CONTAS DO MÊS</span><strong id="billsCount">0</strong><small>Vencimentos previstos</small></article><article><span>TOTAL PREVISTO</span><strong id="billsTotal">R$ 0,00</strong><small>Soma das contas fixas</small></article><article><span>AINDA A PAGAR</span><strong id="billsPending">R$ 0,00</strong><small>Contas pendentes</small></article></div>
           <div class="feature-section-head"><h3>Vencimentos do mês</h3><span>Marque o pagamento assim que quitar a conta</span></div><div id="fixedBills" class="bill-list"></div>
+        </section>
+        <section id="shoppingPanel" class="page-feature shopping-feature hidden" aria-label="Listas de compras inteligentes">
+          <div class="feature-intro"><div><span class="overline">COMPRAS SEMANAIS</span><h2>Da lista ao carrinho 🛒</h2><p>Planeje os produtos, confira os preços na loja e registre a compra inteira como uma única despesa.</p></div><button type="button" id="shoppingNew" class="feature-action">＋ Nova lista</button></div>
+          <div class="feature-stats shopping-stats"><article><span>LISTAS EM ABERTO</span><strong id="shoppingOpenCount">0</strong><small>Para organizar e comprar</small></article><article><span>ITENS PENDENTES</span><strong id="shoppingPendingCount">0</strong><small>Nas listas abertas</small></article><article><span>COMPRAS FINALIZADAS</span><strong id="shoppingFinishedCount">0</strong><small>Já lançadas nas finanças</small></article></div>
+          <div class="shopping-layout">
+            <aside class="shopping-list-rail"><div class="shopping-rail-head"><h3>Minhas listas</h3><span id="shoppingListCount">0 listas</span></div><div id="shoppingListCards" class="shopping-list-cards"></div></aside>
+            <div id="shoppingEditor" class="shopping-editor">
+              <div id="shoppingEmpty" class="shopping-placeholder"><span>🧺</span><h3>Sua próxima compra começa aqui</h3><p>Crie uma lista para organizar os produtos antes de sair de casa.</p><button id="shoppingEmptyCreate" type="button" class="feature-action">＋ Criar primeira lista</button></div>
+              <div id="shoppingWorkspace" class="hidden">
+                <div class="shopping-editor-top"><label>Nome da lista<input id="shoppingTitle" maxlength="100" placeholder="Ex.: Mercado da semana" /></label><label>Data prevista<input id="shoppingDate" type="date" /></label></div>
+                <div class="shopping-items-title"><div><h3>Produtos da lista</h3><p>Marque os itens quando colocar no carrinho.</p></div><span id="shoppingProgress">0 de 0 comprados</span></div>
+                <div class="shopping-items-table"><div class="shopping-items-head"><span>COMPRADO</span><span>PRODUTO</span><span>QTD.</span><span>PREÇO UN.</span><span>SUBTOTAL</span><span></span></div><div id="shoppingItems"></div></div>
+                <button type="button" id="shoppingAddItem" class="shopping-add-item">＋ Adicionar produto</button>
+                <div class="shopping-totals"><div><small>ESTIMATIVA DOS ITENS COM PREÇO</small><strong id="shoppingEstimated">R$ 0,00</strong></div><div class="shopping-real-total"><small>ITENS MARCADOS COMO COMPRADOS</small><strong id="shoppingActual">R$ 0,00</strong></div></div>
+                <div class="shopping-checkout"><h3>Finalizar a compra</h3><p>Ao concluir, só os itens marcados entram em um único lançamento de despesa.</p><div class="shopping-checkout-fields"><label>Quem pagou?<select id="shoppingPayer"><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option><option value="Ambos">Ambos</option></select></label><label>Forma de pagamento<select id="shoppingPayment"><option value="">Selecione...</option><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Cartão de débito</option><option value="Crédito">Cartão de crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option></select></label><label>Data da compra<input id="shoppingPurchaseDate" type="date" /></label></div></div>
+                <div class="shopping-actions"><span id="shoppingSavedStatus">Nenhuma alteração pendente</span><div><button type="button" id="shoppingDuplicate" class="shopping-secondary">Duplicar para outra semana</button><button type="button" id="shoppingSave" class="shopping-secondary">Salvar lista</button><button type="button" id="shoppingFinish" class="feature-action">✓ Finalizar e lançar despesa</button></div></div>
+              </div>
+            </div>
+          </div>
         </section>
         <section id="personalPanel" class="personal-panel hidden" aria-label="Resumo dos gastos pessoais"><div class="personal-intro"><div><span class="overline">UM CUIDADO COM CADA UM</span><h2>Nossos pequenos cuidados ✨</h2><p>Corte de cabelo, salão, unhas, autocuidado e outros gastos particulares.</p></div><label class="person-filter-label">Visualizar<select id="personalPersonFilter"><option value="todos">Todos</option><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option></select></label></div><div class="personal-cards"><article class="personal-card crispim"><span class="personal-emoji">✂</span><small>GASTOS DO CRISPIM</small><strong id="personalCrispimTotal">R$ 0,00</strong></article><article class="personal-card yasha"><span class="personal-emoji">✿</span><small>GASTOS DA YASHA</small><strong id="personalYashaTotal">R$ 0,00</strong></article></div></section>
         <section class="panel records"><div class="panel-head records-head"><div><h3 id="recordsTitle">Lançamentos do mês</h3><p id="recordsSubtitle">Acompanhe e organize seus registros</p></div><div class="record-tools"><input id="search" type="search" placeholder="Buscar lançamento..." aria-label="Buscar lançamento"/><span id="recordCount" class="chip">0 registros</span></div></div><div class="table-scroll"><table><thead><tr><th>DESCRIÇÃO</th><th>CATEGORIA</th><th>QUEM PAGOU</th><th>PAGAMENTO</th><th>DATA</th><th>VALOR</th><th>SITUAÇÃO</th><th>AÇÕES</th></tr></thead><tbody id="recordBody"></tbody></table><div id="emptyRecords" class="empty-records"><span>▤</span><strong>Nenhum lançamento neste mês</strong><p>Comece adicionando uma receita ou despesa.</p><button id="emptyAdd" class="subtle-button">＋ Adicionar lançamento</button></div></div></section>
