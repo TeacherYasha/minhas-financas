@@ -49,6 +49,7 @@
   }
   function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');}
   function showLoggedIn() {$('#login').classList.add('hidden');$('#app').classList.remove('hidden');const name=profile?.name||profile?.email?.split('@')[0]||'Família';$('#sideName').textContent=name.split(' ')[0];$('#sideAvatar').textContent=name.charAt(0).toUpperCase();$('#userAvatar').textContent=name.charAt(0).toUpperCase();}
+  function isYashaAccount() {return ['yashasantos10@gmail.com','yashamsantos@gmail.com'].includes(String(profile?.email||'').trim().toLowerCase());}
   async function login() {
     if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.includes('CONFIGURAR_')) {toast('Falta configurar o Client ID Google. O site ainda está em preparação.',true);return;}
     try {
@@ -58,8 +59,11 @@
         token=response.access_token;tokenExpires=Date.now()+(Number(response.expires_in||3500)*1000);
         try {
           profile=await googleRequest('https://www.googleapis.com/oauth2/v3/userinfo');
-          const email=String(profile.email||'').toLowerCase();
-          if(!profile.email_verified || !CONFIG.ALLOWED_EMAILS.includes(email)){showLoggedOut();throw Error('Esta conta Google não está autorizada para acessar as finanças da família.');}
+          const email=String(profile?.email||'').trim().toLowerCase();
+          const allowed=new Set((Array.isArray(CONFIG.ALLOWED_EMAILS)?CONFIG.ALLOWED_EMAILS:[]).map(value=>String(value).trim().toLowerCase()));
+          if(!email)throw Error('O Google não informou o e-mail da conta. Tente entrar novamente e autorize o acesso ao perfil.');
+          if(profile.email_verified!==true)throw Error(`O Google não confirmou o e-mail ${email}. Confira sua conta Google.`);
+          if(!allowed.has(email))throw Error(`A conta selecionada foi ${email}, que não está na lista da família. Escolha um dos três e-mails autorizados.`);
           await loadSheetTabId();await loadRows();showLoggedIn();toast(`Bem-vindo(a), ${profile.given_name||'família'}!`);
         }catch(error){showLoggedOut();toast(error.message||'Não foi possível entrar.',true);}
       }});
@@ -110,7 +114,7 @@
   function openModal(kind='Saída',id=null){
     editingId=id;entryKind=kind;$('#entryForm').reset();$('#dueDate').value=nowISO();$('#installments').value=1;
     $('#scope').value=page==='personal'?'Pessoal':'Casa';
-    $('#payer').value=profile?.email==='yashasantos10@gmail.com'?'Yasha':'Crispim';
+    $('#payer').value=isYashaAccount()?'Yasha':'Crispim';
     $('#payment').value='';
     $('#modalTitle').textContent=id?'Editar lançamento':'Novo lançamento';
     $('#recurring').disabled=Boolean(id);$('#installments').disabled=Boolean(id);$('#typeExpense').disabled=Boolean(id);$('#typeIncome').disabled=Boolean(id);
@@ -121,7 +125,7 @@
       $('#recurring').checked=record.recurring;$('#installments').value=record.installments||1;$('#settled').checked=record.status!=='Pendente';
       $('#scope').value=record.scope;$('#person').value=record.person;$('#payer').value=['Crispim','Yasha'].includes(record.payer)?record.payer:'';
       $('#payment').value=record.payment||'Não informado';$('#quantity').value=record.quantity;
-    } else if(page==='personal'){$('#person').value=profile?.email==='yashasantos10@gmail.com'?'Yasha':'Crispim';}
+    } else if(page==='personal'){$('#person').value=isYashaAccount()?'Yasha':'Crispim';}
     setKind(entryKind);
     if(record){if(![...$('#category').options].some(o=>o.value===record.category))$('#category').add(new Option(record.category,record.category));$('#category').value=record.category;}
     updateFormHints();$('#modalBackdrop').classList.remove('hidden');$('#description').focus();
