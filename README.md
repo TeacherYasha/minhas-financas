@@ -8,8 +8,8 @@ Painel financeiro residencial, com todos os lançamentos feitos no site. A plani
 
 - Planilha: `https://docs.google.com/spreadsheets/d/1iQuqP2wnrknq9w9idwErlYLJ_7uC0Y0D2lqFtzuHOEg`
 - Proprietário: `guitaneto2@gmail.com`.
-- Outro usuário permitido: `yashasantos10@gmail.com`.
-- **Remover o compartilhamento antigo de `yashamsantos@gmail.com`.** No Google Planilhas, clique em Compartilhar → selecione a conta antiga → Remover acesso.
+- Outros usuários permitidos: `yashasantos10@gmail.com` e `yashamsantos@gmail.com`.
+- Manter o compartilhamento exclusivamente com esses três e-mails.
 - Não usar a opção "Qualquer pessoa com o link".
 
 ### 2. Repositório GitHub
@@ -24,11 +24,11 @@ Na conta `guitaneto2@gmail.com`:
 
 1. Abrir [Google Cloud Console](https://console.cloud.google.com/), criar ou selecionar um projeto para o site financeiro.
 2. Ativar a **Google Sheets API** na biblioteca de APIs.
-3. Em **Google Auth Platform**, configurar o consentimento OAuth. Usar o público externo e adicionar `guitaneto2@gmail.com` e `yashasantos10@gmail.com` como usuários de teste enquanto o app estiver em teste.
+3. Em **Google Auth Platform**, configurar o consentimento OAuth. Usar o público externo e adicionar `guitaneto2@gmail.com`, `yashasantos10@gmail.com` e `yashamsantos@gmail.com` como usuários de teste enquanto o app estiver em teste.
 4. Criar um **OAuth Client ID** para o tipo **Web application**.
 5. Adicionar `https://teacheryasha.github.io` aos **Authorized JavaScript origins** (somente a origem, sem `/minhas-financas/`).
 6. Copiar o Client ID que termina em `.apps.googleusercontent.com` e substituir `GOOGLE_CLIENT_ID` em `config.js`.
-7. Publicar o `config.js` atualizado no GitHub e testar o login e uma gravação com as duas contas.
+7. Publicar o `config.js` atualizado no GitHub e testar o login e uma gravação com as três contas.
 
 O Google pode mostrar uma tela de consentimento solicitando acesso à planilha. A permissão `spreadsheets` permite acessar planilhas autorizadas por aquela conta, portanto revise o escopo antes de autorizar. Enquanto a tela de consentimento estiver em modo de teste, as autorizações podem expirar periodicamente e o Google pode impor limites de usuários de teste.
 
@@ -53,4 +53,4 @@ O cadastro de uma compra parcelada cria um registro por mês e divide os centavo
 
 ## Estado atual
 
-O site está publicado no GitHub Pages e o login com Google foi testado pelo proprietário. Antes da importação histórica de setembro, remova o acesso da antiga conta `yashamsantos@gmail.com` à planilha privada. Os dados anteriores e os registros históricos devem ser mantidos sem duplicação.
+O site está publicado no GitHub Pages e o login com Google foi testado pelo proprietário. Os três e-mails da família estão autorizados na planilha e no site; os outros acessos permanecem bloqueados. Os dados anteriores e os registros históricos devem ser mantidos sem duplicação.
