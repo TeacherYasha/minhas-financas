@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261109-4" />
+  <link rel="stylesheet" href="style.css?v=20261109-5" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261109-4" defer></script>
+  <script src="app.js?v=20261109-5" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -24,7 +24,8 @@
       <h1>Minhas <em>Finanças.</em></h1>
       <p>Seu dinheiro em ordem. Sua casa em equilíbrio.</p>
       <div class="login-illustration"><div class="illustration-circle">↗</div><div class="illustration-line"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-      <button id="loginButton" class="button main-button"><span class="google-g">G</span> Entrar com minha conta Google</button>
+      <button id="loginButton" class="button main-button"><span class="google-g">G</span><span id="loginButtonText">Entrar com minha conta Google</span></button>
+      <button id="switchAccountButton" class="switch-account hidden" type="button">Usar outra conta Google</button>
       <p id="loginHint" class="login-hint">Acesso exclusivo para as contas autorizadas da família.</p>
       <div class="login-footer">🔒 Os registros são armazenados na Planilha Google privada.</div>
     </div>
