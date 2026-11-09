@@ -42,6 +42,16 @@ Formas de pagamento: Pix, Dinheiro, Débito, Crédito, Transferência, Boleto e 
 
 O cadastro de uma compra parcelada cria um registro por mês e divide os centavos sem perda de arredondamento. Contas recorrentes são registradas para os próximos 24 meses.
 
+## Áreas do site
+
+- **Visão geral:** saldo, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
+- **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
+- **Parcelamentos:** compras agrupadas, total, saldo pendente, barra de progresso, próximos vencimentos e controle individual de cada parcela.
+- **Contas fixas:** lista de vencimentos recorrentes do mês, totais e confirmação de pagamento por conta.
+- **Gastos pessoais:** despesas individuais de Crispim e Yasha, com filtros e totais separados.
+
+Os controles das páginas continuam usando a mesma Planilha Google privada, sem duplicar os dados em novas abas.
+
 ## Segurança
 
 - O GitHub Pages é público, mas **não carrega dados financeiros antes do login**.
