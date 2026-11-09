@@ -63,7 +63,7 @@ Os controles das páginas continuam usando a mesma Planilha Google privada. A ab
 
 ## Experiência visual
 
-A navegação lateral possui um destaque deslizante e resposta visual ao toque. Ao trocar de área, uma cortina animada percorre o conteúdo, mostra o ícone e o nome da aba de destino e revela a nova tela com movimento. Os cartões entram em sequência, e a rolagem retorna suavemente ao início quando necessário. Os efeitos usam transições CSS para funcionar mesmo sem a API de animações do navegador. As transições respeitam a preferência de acessibilidade **Reduzir movimento** do dispositivo e foram ajustadas para continuar leves no celular.
+A navegação lateral possui um destaque deslizante e resposta visual ao toque. Ao trocar de área, uma cortina animada percorre o conteúdo, mostra o ícone e o nome da aba de destino e revela a nova tela com movimento. Os cartões entram em sequência, e a rolagem retorna suavemente ao início quando necessário. Os efeitos usam transições CSS para funcionar mesmo sem a API de animações do navegador. No topo do site, o botão **Animações ligadas / Ativar animações** informa o estado atual. Se o Windows ou navegador solicitar movimento reduzido, a família pode ativar os efeitos explicitamente para este site, sem alterar as configurações do sistema; a escolha fica salva apenas no navegador. Também é possível desligar as animações pelo botão.
 
 ## Segurança
 
