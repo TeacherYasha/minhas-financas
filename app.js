@@ -16,7 +16,7 @@
   const HOUSE_CATEGORIES = ['Alimentação','Mercado','Itens de Limpeza','Casa e Cozinha','Moto','Contas','Aluguel','Energia','Água','Internet','Gasolina','Compras online','Saúde','Lazer','Educação','Outros','Outros gastos'];
   const PERSONAL_CATEGORIES = ['Cabelo / Barbeiro','Unhas / Beleza','Cuidados pessoais','Saúde','Vestuário','Lazer','Outros pessoais'];
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
-  const COLORS = ['#d7ad76','#9087e5','#e6c677','#6dbcd5','#76c9a5','#e49b7a','#b28cdd','#e4859f','#7ba8d7','#c9b875','#94a3b8'];
+  const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], page = 'overview', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
@@ -151,7 +151,7 @@
     $('#settledLabel').textContent=kind==='Entrada'?'Já foi recebido':'Já foi pago';updateScope();
   }
   function updateFormHints(){const multiple=Number($('#installments').value)>1,rec=$('#recurring').checked;$('#installments').disabled=rec||Boolean(editingId);$('#settled').disabled=(multiple||rec)&&!editingId;$('#formHelp').textContent=editingId?'A alteração será aplicada somente a este registro.':rec?'A conta será criada nos próximos 24 meses.':multiple?'O valor total será dividido automaticamente entre os meses.':'';}
-  function createCell(tag,text,className){const el=document.createElement(tag);if(text!==undefined)el.textContent=String(text);if(className)el.className=className;return el;}
+  function createCell(tag,text,className){const el=document.createElement(tag);if(text!==undefined&&text!==null)el.textContent=String(text);if(className)el.className=className;return el;}
   function render(){
     $('#monthLabel').textContent=monthLabel(month);$('#summaryMonth').textContent=monthLabel(month);
     const current=entries.filter(e=>e.due.startsWith(month));const income=current.filter(e=>e.type==='Entrada').reduce((a,e)=>a+e.cents,0);const expense=current.filter(e=>e.type==='Saída').reduce((a,e)=>a+e.cents,0);
@@ -160,7 +160,7 @@
     $('#realBalance').textContent=money(received-paid);$('#incomeTotal').textContent=money(income);$('#expenseTotal').textContent=money(expense);$('#pendingTotal').textContent=money(pending);$('#forecast').textContent=money(income-expense);$('#forecast').className=income-expense<0?'negative':'positive';$('#incomeBar').style.width=`${income+expense?income/(income+expense)*100:50}%`;
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
-    const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',`${Math.round(val/expense*100)}%`);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
+    const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
     const titles={overview:'Lançamentos do mês',entries:'Todos os lançamentos',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
     const crumbs={overview:'Visão geral',entries:'Lançamentos',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
