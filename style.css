@@ -65,3 +65,26 @@ form input:focus,form select:focus{box-shadow:0 0 0 3px #a0d88726}
 @media(max-width:760px){.kpi,.panel{border-radius:17px}.personal-panel{padding:20px 15px}.personal-intro{align-items:start;flex-direction:column}.personal-cards{gap:9px}.personal-card{padding:17px 15px;min-height:117px}.personal-card strong{font-size:21px}.personal-emoji{right:12px;top:9px;font-size:24px}.main-content>.headline,.kpis,.insights,.records,.personal-panel{animation-duration:.3s}}
 @media(max-width:390px){.personal-cards{grid-template-columns:1fr}.personal-card{min-height:94px}.personal-card strong{font-size:22px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Legenda mais legível e com mais contraste, mantendo o painel escuro. */
+.categories .panel-head h3{font-size:18px;color:#f3f8ff}
+.categories .panel-head p{font-size:13px;color:#a9bdcc}
+.categories .chart-body{gap:clamp(18px,2.5vw,35px);min-height:265px}
+.categories .legend{max-width:290px;min-width:0;gap:15px}
+.categories .legend-item{display:grid;grid-template-columns:14px minmax(0,1fr) auto;align-items:center;gap:12px;font-size:15px;font-weight:600;line-height:1.35;color:#eef4fc}
+.categories .legend-item>i{height:13px;width:13px;border-radius:50%;box-shadow:0 0 12px #a6b5c54d}
+.categories .legend-item>span{min-width:0;overflow-wrap:break-word}
+.categories .legend-item>b{margin-left:0;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;color:#fff}
+@media(max-width:760px){
+  .categories .chart-body{gap:17px}
+  .categories .legend{gap:13px}
+  .categories .legend-item{font-size:14px;gap:9px;grid-template-columns:13px minmax(0,1fr) auto}
+  .categories .legend-item>b{font-size:15px}
+}
+@media(max-width:540px){
+  .categories .chart-body{flex-direction:column;padding:20px 0 10px;gap:28px}
+  .categories .donut{width:176px;height:176px}
+  .categories .donut>div{width:128px;height:128px}
+  .categories .legend{width:100%;max-width:360px}
+  .categories .legend-item{font-size:15px;gap:12px}
+}
