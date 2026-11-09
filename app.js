@@ -6,6 +6,7 @@
   const CONFIG = window.FINANCAS_CONFIG || {};
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   const API = 'https://sheets.googleapis.com/v4/spreadsheets';
+  const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
   const $ = (s) => document.querySelector(s);
   const money = (cents) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);
   const nowISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -21,6 +22,20 @@
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
+  function rememberedEmail() {
+    try {
+      const email=String(localStorage.getItem(LAST_ACCOUNT_KEY)||'').trim().toLowerCase();
+      return (CONFIG.ALLOWED_EMAILS||[]).some(allowed=>String(allowed).trim().toLowerCase()===email)?email:'';
+    } catch {return '';}
+  }
+  function saveRememberedEmail(email) {try {localStorage.setItem(LAST_ACCOUNT_KEY,email);}catch {}}
+  function clearRememberedEmail() {try {localStorage.removeItem(LAST_ACCOUNT_KEY);}catch {}}
+  function updateLoginOptions() {
+    const email=rememberedEmail();
+    $('#loginButtonText').textContent=email?`Continuar como ${email}`:'Entrar com minha conta Google';
+    $('#switchAccountButton').classList.toggle('hidden',!email);
+    $('#loginHint').textContent=email?'Acesso rápido com o Google. Não guardamos senhas ou tokens de acesso.':'Acesso exclusivo para as contas autorizadas da família.';
+  }
   function authValid() { return Boolean(token && Date.now() < tokenExpires - 60000); }
   async function googleRequest(url, options={}) {
     if (!authValid()) { showLoggedOut();throw Error('Sua sessão expirou. Entre novamente com o Google.'); }
@@ -47,14 +62,16 @@
     if(!match)throw Error(`A aba ${CONFIG.SHEET_NAME} não foi encontrada na planilha.`);
     sheetTabId=match.properties.sheetId;return sheetTabId;
   }
-  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');}
+  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');updateLoginOptions();}
   function showLoggedIn() {$('#login').classList.add('hidden');$('#app').classList.remove('hidden');const name=profile?.name||profile?.email?.split('@')[0]||'Família';$('#sideName').textContent=name.split(' ')[0];$('#sideAvatar').textContent=name.charAt(0).toUpperCase();$('#userAvatar').textContent=name.charAt(0).toUpperCase();}
   function isYashaAccount() {return ['yashasantos10@gmail.com','yashamsantos@gmail.com'].includes(String(profile?.email||'').trim().toLowerCase());}
-  async function login() {
+  async function login(forceAccountSelection=false) {
     if(!CONFIG.GOOGLE_CLIENT_ID || CONFIG.GOOGLE_CLIENT_ID.includes('CONFIGURAR_')) {toast('Falta configurar o Client ID Google. O site ainda está em preparação.',true);return;}
     try {
       if(!window.google?.accounts?.oauth2)throw Error('O serviço de login Google ainda não carregou. Aguarde e tente novamente.');
-      if(!oauthClient) oauthClient=google.accounts.oauth2.initTokenClient({client_id:CONFIG.GOOGLE_CLIENT_ID,scope:SCOPES,include_granted_scopes:false,callback:async response=>{
+      if(!oauthClient) oauthClient=google.accounts.oauth2.initTokenClient({client_id:CONFIG.GOOGLE_CLIENT_ID,scope:SCOPES,include_granted_scopes:false,error_callback:error=>{
+        if(error.type==='popup_failed_to_open')toast('O navegador bloqueou a janela do Google. Permita pop-ups para este site e tente novamente.',true);
+      },callback:async response=>{
         if(response.error){toast(`Login não autorizado: ${response.error}`,true);return;}
         token=response.access_token;tokenExpires=Date.now()+(Number(response.expires_in||3500)*1000);
         try {
@@ -64,13 +81,14 @@
           if(!email)throw Error('O Google não informou o e-mail da conta. Tente entrar novamente e autorize o acesso ao perfil.');
           if(profile.email_verified!==true)throw Error(`O Google não confirmou o e-mail ${email}. Confira sua conta Google.`);
           if(!allowed.has(email))throw Error(`A conta selecionada foi ${email}, que não está na lista da família. Escolha um dos três e-mails autorizados.`);
-          await loadSheetTabId();await loadRows();showLoggedIn();toast(`Bem-vindo(a), ${profile.given_name||'família'}!`);
+          await loadSheetTabId();await loadRows();saveRememberedEmail(email);showLoggedIn();toast(`Bem-vindo(a), ${profile.given_name||'família'}!`);
         }catch(error){showLoggedOut();toast(error.message||'Não foi possível entrar.',true);}
       }});
-      oauthClient.requestAccessToken({prompt:'select_account'});
+      const email=forceAccountSelection?'':rememberedEmail();
+      oauthClient.requestAccessToken(email?{prompt:'',login_hint:email}:{prompt:'select_account'});
     }catch(error){toast(error.message,true);}
   }
-  function logout() {if(token&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(token,()=>{});showLoggedOut();}
+  function logout() {if(token&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(token,()=>{});clearRememberedEmail();showLoggedOut();}
   function addMonths(iso,n) {const [y,m,d]=iso.split('-').map(Number);const idx=y*12+m-1+n;const yy=Math.floor(idx/12),mm=(idx%12)+1;const max=new Date(yy,mm,0).getDate();return `${yy}-${String(mm).padStart(2,'0')}-${String(Math.min(max,d)).padStart(2,'0')}`;}
   async function appendRows(records) {
     await googleRequest(`${rangeURL('A:S')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:records})});
@@ -193,7 +211,7 @@
       tr.append(nameTd,catTd,payerTd,paymentTd,dateTd,amountTd,statusTd,actions);tbody.append(tr);
     }
   }
-  function attach(){$('#loginButton').addEventListener('click',login);$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>openModal());$('#emptyAdd').addEventListener('click',()=>openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
+  function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>openModal());$('#emptyAdd').addEventListener('click',()=>openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
     $('#prevMonth').addEventListener('click',()=>{month=monthShift(month,-1);render();});$('#nextMonth').addEventListener('click',()=>{month=monthShift(month,1);render();});$('#currentMonth').addEventListener('click',()=>{month=currentMonth();render();});$('#refresh').addEventListener('click',async()=>{try{await loadRows(true)}catch(e){toast(e.message,true)}});
     $('#search').addEventListener('input',render);$('#nav').addEventListener('click',event=>{const b=event.target.closest('[data-page]');if(!b)return;page=b.dataset.page;document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',n===b));$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');render();});
     $('#menuToggle').addEventListener('click',()=>{$('#sidebar').classList.add('open');$('#mobileBackdrop').classList.remove('hidden');});$('#mobileBackdrop').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');});
@@ -204,6 +222,6 @@
   }
   $('#payer').add(new Option('Ambos','Ambos'));
   $('#payment').prepend(new Option('Selecione...',''));$('#payment').required=true;
-  attach();setKind('Saída');$('#dueDate').value=nowISO();render();
+  attach();updateLoginOptions();setKind('Saída');$('#dueDate').value=nowISO();render();
   if(!CONFIG.GOOGLE_CLIENT_ID||CONFIG.GOOGLE_CLIENT_ID.startsWith('CONFIGURAR_')){$('#loginHint').textContent='Aguardando configuração do login Google para ativar o site.';$('#loginButton').disabled=true;}
 })();
