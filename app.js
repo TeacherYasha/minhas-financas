@@ -419,7 +419,34 @@
       actions.append(status,edit);card.append(icon,info,amount,actions);container.append(card);
     }
   }
-  const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true;
+  const MOTION_KEY='minhas-financas:preferencia-animacoes';
+  let motionChoiceInMemory=null;
+  function motionChoice(){if(motionChoiceInMemory)return motionChoiceInMemory;try{return localStorage.getItem(MOTION_KEY)||'auto';}catch{return 'auto';}}
+  const reducedMotion=()=>{
+    const choice=motionChoice();
+    return choice==='off'||(choice!=='on'&&window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true);
+  };
+  function updateMotionControl(){
+    const choice=motionChoice(),active=!reducedMotion(),button=$('#motionToggle');
+    document.body.classList.toggle('motion-enabled',choice==='on');
+    document.body.classList.toggle('motion-disabled',choice==='off');
+    button.textContent=active?'✨ Animações ligadas':'✨ Ativar animações';
+    button.setAttribute('aria-pressed',String(active));
+    button.dataset.active=String(active);
+    button.title=active?'Clique para reduzir as animações':'Clique para ativar as animações mesmo se o Windows estiver reduzindo movimentos';
+  }
+  function toggleMotion(){
+    const next=reducedMotion()?'on':'off';
+    motionChoiceInMemory=next;
+    try{localStorage.setItem(MOTION_KEY,next);}catch{}
+    clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;
+    $('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');
+    $('#routeCurtain').className='route-curtain';
+    document.querySelectorAll('.nav-link').forEach(link=>link.classList.toggle('active',link.dataset.page===page));
+    syncNavIndicator();
+    updateMotionControl();
+    toast(next==='on'?'Animações ativadas para este navegador. Experimente trocar de aba.':'Animações reduzidas neste navegador.');
+  }
   const navTheme = {
     overview:['#2c513c','#c9f292'],entries:['#244c61','#86dafa'],shopping:['#235246','#a6f7d7'],
     installments:['#493c62','#d7a8ff'],recurring:['#554330','#ffd29a'],personal:['#553a54','#f6bbdf']
@@ -599,6 +626,7 @@
     $('#viewAllEntries').addEventListener('click',()=>navigateTo('entries'));
     $('#prevMonth').addEventListener('click',()=>{month=monthShift(month,-1);render();});$('#nextMonth').addEventListener('click',()=>{month=monthShift(month,1);render();});$('#currentMonth').addEventListener('click',()=>{month=currentMonth();render();});$('#refresh').addEventListener('click',async()=>{try{await loadRows(true);if(page==='shopping')await loadShoppingLists();}catch(e){toast(e.message,true)}});
     $('#search').addEventListener('input',render);$('#nav').addEventListener('click',event=>{const b=event.target.closest('[data-page]');if(!b)return;navClickRipple(b,event);navigateTo(b.dataset.page);});
+    $('#motionToggle').addEventListener('click',toggleMotion);
     $('#menuToggle').addEventListener('click',()=>{$('#sidebar').classList.add('open');$('#mobileBackdrop').classList.remove('hidden');});$('#mobileBackdrop').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');});
     $('#closeModal').addEventListener('click',closeModal);$('#cancelModal').addEventListener('click',closeModal);$('#modalBackdrop').addEventListener('click',event=>{if(event.target===$('#modalBackdrop'))closeModal();});document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
     $('#entryForm').addEventListener('submit',saveForm);$('#typeExpense').addEventListener('click',()=>setKind('Saída'));$('#typeIncome').addEventListener('click',()=>setKind('Entrada'));$('#scope').addEventListener('change',updateScope);$('#installments').addEventListener('change',updateFormHints);$('#recurring').addEventListener('change',()=>{if($('#recurring').checked)$('#installments').value=1;updateFormHints();});
@@ -615,6 +643,6 @@
   $('#payer').add(new Option('Ambos','Ambos'));
   $('#payment').prepend(new Option('Selecione...',''));$('#payment').required=true;
   const viewAllButton=createCell('button','Ver todos →','view-all-button');viewAllButton.id='viewAllEntries';viewAllButton.type='button';$('.record-tools').append(viewAllButton);
-  setupNavMotion();attach();updateLoginOptions();setKind('Saída');$('#dueDate').value=nowISO();render();
+  setupNavMotion();attach();updateLoginOptions();updateMotionControl();setKind('Saída');$('#dueDate').value=nowISO();render();
   if(!CONFIG.GOOGLE_CLIENT_ID||CONFIG.GOOGLE_CLIENT_ID.startsWith('CONFIGURAR_')){$('#loginHint').textContent='Aguardando configuração do login Google para ativar o site.';$('#loginButton').disabled=true;}
 })();
