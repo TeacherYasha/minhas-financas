@@ -430,13 +430,13 @@
     const choice=motionChoice(),active=!reducedMotion(),button=$('#motionToggle');
     document.body.classList.toggle('motion-enabled',choice==='on');
     document.body.classList.toggle('motion-disabled',choice==='off');
-    button.textContent=active?'✨ Animações ligadas':'✨ Ativar animações';
+    button.textContent=choice==='auto'?'✨ Forçar animações':active?'✨ Animações ligadas':'✨ Ativar animações';
     button.setAttribute('aria-pressed',String(active));
     button.dataset.active=String(active);
-    button.title=active?'Clique para reduzir as animações':'Clique para ativar as animações mesmo se o Windows estiver reduzindo movimentos';
+    button.title=choice==='auto'?'Clique para forçar as animações, independentemente da configuração do Windows':active?'Clique para reduzir as animações':'Clique para ativar as animações mesmo se o Windows estiver reduzindo movimentos';
   }
   function toggleMotion(){
-    const next=reducedMotion()?'on':'off';
+    const next=motionChoice()==='auto'?'on':reducedMotion()?'on':'off';
     motionChoiceInMemory=next;
     try{localStorage.setItem(MOTION_KEY,next);}catch{}
     clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;
