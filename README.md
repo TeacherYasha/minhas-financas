@@ -61,6 +61,10 @@ O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com 
 
 Os controles das páginas continuam usando a mesma Planilha Google privada. A aba extra `ListasCompras` armazena exclusivamente o detalhamento dos produtos de cada compra; a aba `Lancamentos` permanece como fonte das despesas e receitas, sem repetir cada produto como uma despesa individual.
 
+## Experiência visual
+
+A navegação lateral possui um destaque deslizante, resposta visual ao toque e transições suaves ao trocar de área. Cartões e botões recebem movimentos discretos ao interagir. As transições respeitam a preferência de acessibilidade **Reduzir movimento** do navegador ou dispositivo e foram ajustadas para não exigir animações pesadas no celular.
+
 ## Segurança
 
 - O GitHub Pages é público, mas **não carrega dados financeiros antes do login**.
