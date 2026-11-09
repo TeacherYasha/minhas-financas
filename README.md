@@ -47,7 +47,7 @@ O cadastro de uma compra parcelada cria um registro por mês e divide os centavo
 - **Visão geral:** saldo, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
 - **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
 - **Parcelamentos:** compras agrupadas, total, saldo pendente, barra de progresso, próximos vencimentos e controle individual de cada parcela.
-- **Contas fixas:** lista de vencimentos recorrentes do mês, totais e confirmação de pagamento por conta.
+- **Contas fixas:** lista de vencimentos recorrentes e contas já classificadas como aluguel, energia, água, internet ou contas do mês, com totais e confirmação de pagamento por conta. Exibir uma conta nessa área não a transforma automaticamente em recorrente.
 - **Gastos pessoais:** despesas individuais de Crispim e Yasha, com filtros e totais separados.
 
 Os controles das páginas continuam usando a mesma Planilha Google privada, sem duplicar os dados em novas abas.
