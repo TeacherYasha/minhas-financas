@@ -34,7 +34,11 @@ O Google pode mostrar uma tela de consentimento solicitando acesso à planilha. 
 
 ## Modelo de dados
 
-O site utiliza a aba `Lancamentos` e as colunas A:N: ID, descrição, tipo, categoria, valor em reais, data do registro, vencimento, situação, número da parcela, total de parcelas, grupo, recorrente, registrado por, criado em.
+O site utiliza a aba `Lancamentos` e as colunas A:S. As colunas A:N preservam o modelo original: ID, descrição, tipo, categoria, valor em reais, data do registro, vencimento, situação, número da parcela, total de parcelas, grupo, recorrente, registrado por, criado em.
+
+As colunas O:S acrescentam **Quem pagou**, **Forma de pagamento**, **Tipo de gasto** (Casa/Pessoal), **Pessoa** (Crispim/Yasha, para despesas pessoais) e **Quantidade** opcional. A interface tem uma seção própria para gastos pessoais; os dados continuam na mesma tabela.
+
+Formas de pagamento: Pix, Dinheiro, Débito, Crédito, Transferência, Boleto e Não informado. Nos registros históricos importados da planilha de setembro, a forma é marcada como Não informado, porque o arquivo original não contém essa informação.
 
 O cadastro de uma compra parcelada cria um registro por mês e divide os centavos sem perda de arredondamento. Contas recorrentes são registradas para os próximos 24 meses.
 
@@ -49,4 +53,4 @@ O cadastro de uma compra parcelada cria um registro por mês e divide os centavo
 
 ## Estado atual
 
-O código está pronto para publicação, mas o login não funciona enquanto `GOOGLE_CLIENT_ID` estiver com o valor de configuração. O repositório GitHub precisa ser criado e o OAuth ativado. Não use dados financeiros reais antes desses testes.
+O site está publicado no GitHub Pages e o login com Google foi testado pelo proprietário. Antes da importação histórica de setembro, remova o acesso da antiga conta `yashamsantos@gmail.com` à planilha privada. Os dados anteriores e os registros históricos devem ser mantidos sem duplicação.
