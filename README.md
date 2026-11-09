@@ -42,15 +42,24 @@ Formas de pagamento: Pix, Dinheiro, Débito, Crédito, Transferência, Boleto e 
 
 O cadastro de uma compra parcelada cria um registro por mês e divide os centavos sem perda de arredondamento. Contas recorrentes são registradas para os próximos 24 meses.
 
+### Listas de compras
+
+A seção **Lista de compras** utiliza a aba privada `ListasCompras`, com uma linha por lista. O site mantém nesta aba título, data prevista, situação, itens em JSON, ID do lançamento correspondente, quem criou, quem pagou, forma de pagamento e data da compra. Não é necessário editar a planilha manualmente.
+
+O usuário pode criar uma lista semanal, adicionar até 100 produtos, definir quantidade e preço unitário, marcar quais foram realmente comprados, salvar a lista e reutilizá-la em outra semana pelo botão **Duplicar**. A estimativa considera todos os produtos com preço; o total efetivo considera apenas os itens marcados. **Uma lista finalizada cria uma única despesa paga na categoria Mercado**, contendo a soma dos itens comprados. O detalhamento de produtos continua armazenado na própria lista. Listas finalizadas ficam bloqueadas para edição, mas podem ser duplicadas.
+
+**Importante:** para registrar uma compra é necessário clicar em **Finalizar e lançar despesa**; apenas salvar a lista não altera o saldo financeiro. A finalização usa uma requisição ao Google Sheets com a inclusão da despesa e a conclusão da lista na mesma operação, além de verificar previamente o ID da compra para reduzir o risco de duplicidade. Evite finalizar simultaneamente a mesma lista em dois dispositivos.
+
 ## Áreas do site
 
 - **Visão geral:** saldo, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
 - **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
+- **Lista de compras:** carrinho semanal com produtos, quantidades, preços, seleção dos itens comprados, total automático e lançamento agrupado de uma única despesa.
 - **Parcelamentos:** compras agrupadas, total, saldo pendente, barra de progresso, próximos vencimentos e controle individual de cada parcela.
 - **Contas fixas:** lista de vencimentos recorrentes e contas já classificadas como aluguel, energia, água, internet ou contas do mês, com totais e confirmação de pagamento por conta. Exibir uma conta nessa área não a transforma automaticamente em recorrente.
 - **Gastos pessoais:** despesas individuais de Crispim e Yasha, com filtros e totais separados.
 
-Os controles das páginas continuam usando a mesma Planilha Google privada, sem duplicar os dados em novas abas.
+Os controles das páginas continuam usando a mesma Planilha Google privada. A aba extra `ListasCompras` armazena exclusivamente as listas e seus itens; a aba `Lancamentos` permanece como fonte das despesas e receitas, sem repetir cada produto como uma despesa individual.
 
 ## Segurança
 
