@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261109-12" />
+  <link rel="stylesheet" href="style.css?v=20261109-13" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261109-12" defer></script>
+  <script src="app.js?v=20261109-13" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -54,7 +54,7 @@
       </div>
     </div>
     <main class="workspace">
-      <header class="topbar"><div class="breadcrumb"><button id="menuToggle" aria-label="Abrir menu">☰</button><span>Início</span><span class="crumb-sep">/</span><strong id="crumb">Visão geral</strong></div><div class="top-right"><span class="online"><i></i> Conectado ao Google</span><span id="userAvatar" class="avatar">F</span></div></header>
+      <header class="topbar"><div class="breadcrumb"><button id="menuToggle" aria-label="Abrir menu">☰</button><span>Início</span><span class="crumb-sep">/</span><strong id="crumb">Visão geral</strong></div><div class="top-right"><span class="online"><i></i> Conectado ao Google</span><button id="motionToggle" class="motion-toggle" type="button" aria-pressed="true" title="Ativar ou reduzir as animações do site">✨ Animações ligadas</button><span id="userAvatar" class="avatar">F</span></div></header>
       <div class="main-content">
         <div class="headline"><div><span class="overline">SEU PAINEL FINANCEIRO</span><h1 id="pageTitle">Bem-vindo às suas finanças <span>✦</span></h1><p id="pageSubtitle">Uma visão clara de tudo que acontece com o dinheiro da casa.</p></div><button id="newEntry" class="button main-button">＋ Novo lançamento</button></div>
         <div class="period-bar"><span>▦ &nbsp; Período de análise</span><div class="period-control"><button id="prevMonth" aria-label="Mês anterior">‹</button><strong id="monthLabel"></strong><button id="nextMonth" aria-label="Próximo mês">›</button></div><button id="currentMonth" class="text-action">Mês atual</button><button id="refresh" class="text-action refresh">↻ Atualizar</button></div>
