@@ -301,3 +301,51 @@ body.motion-disabled .route-curtain{display:none!important}
 .motion-toggle[data-active="false"]{background:#443a32;border-color:#82674b;color:#ffd9a3}
 .motion-toggle:focus-visible{outline:2px solid #c9f292;outline-offset:3px}
 @media(max-width:760px){.top-right{gap:10px}.motion-toggle{font-size:10px;padding:9px 10px}}
+
+/* Receitas: painel próprio, sem misturar os gastos ou duplicar registros na planilha. */
+.sidebar{overflow-y:auto}
+.nav-link[data-page="income"].active{background:#244b3c;color:#b8f4c2}
+#incomePanel{border-color:#4b7964;background:radial-gradient(circle at 96% 0%,#7ee5a02b,transparent 48%),linear-gradient(140deg,#1d3833,#182c35 75%)}
+.income-feature .feature-intro{margin-bottom:26px}
+.income-feature .overline{color:#b1f5be}
+.income-highlights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px}
+.income-highlights article{min-width:0;display:flex;flex-direction:column;gap:8px;padding:21px 18px;min-height:150px;border-radius:17px;background:linear-gradient(142deg,#203d38,#193039);border:1px solid #42665d;box-shadow:0 8px 28px #071a1b26;transition:transform .28s,box-shadow .28s,border-color .28s}
+.income-highlights article:nth-child(2){background:linear-gradient(142deg,#274935,#21383c);border-color:#578165}
+.income-highlights article:nth-child(3){background:linear-gradient(142deg,#2b3e55,#213440);border-color:#3f6479}
+.income-highlights article:nth-child(4){background:linear-gradient(142deg,#244939,#1d3e39);border-color:#548c6f}
+.income-highlights article:hover{transform:translateY(-3px);box-shadow:0 14px 30px #071a1b55;border-color:#9fe1b2}
+.income-highlights article small{font-size:10px;letter-spacing:1.1px;color:#a9c6bf;font-weight:800}
+.income-highlights article strong{font:750 clamp(20px,2.3vw,29px) Outfit,Arial,sans-serif;color:#eefcf1;overflow-wrap:anywhere}
+.income-highlights article>span{color:#93b4b0;font-size:11px;line-height:1.5}
+.income-highlights article:last-child strong{color:#9cf0b6}
+.income-details{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:19px}
+.income-detail-card{border:1px solid #3b5e58;border-radius:16px;background:#152a32a6;padding:20px 21px;min-width:0}
+.income-section-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:17px}
+.income-section-heading h3{font-size:14px;margin:0;color:#e5f6ed}
+.income-section-heading>span{font-size:10px;color:#8eadaf;text-align:right}
+.income-person-list{display:grid;gap:10px}
+.income-person-list>div{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #2d4c4c;padding-bottom:10px;font-size:12px}
+.income-person-list>div:last-child{border:0;padding:0}
+.income-person-list>div>span{display:flex;align-items:center;gap:10px;color:#c4d8d5}
+.income-person-list strong{font-family:Outfit,Arial,sans-serif;color:#ebf8f1;font-size:15px;white-space:nowrap}
+.income-person-dot{width:10px;height:10px;display:inline-block;border-radius:4px;background:#a3ecba}
+.income-person-dot.yasha{background:#dfa7ef}.income-person-dot.both{background:#f1c17a}
+.income-person-dot.unassigned{background:#8199a7}
+.income-category-breakdown{display:grid;gap:13px}
+.income-category-row{display:grid;gap:7px}
+.income-category-head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:#c4dad7}
+.income-category-head strong{color:#effbf7;font-size:12px;white-space:nowrap}
+.income-category-track{height:7px;background:#344e50;border-radius:99px;overflow:hidden}
+.income-category-track i{height:100%;display:block;border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.income-empty-category{font-size:12px;color:#91b3aa;line-height:1.6}
+.income-filter-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;border-top:1px solid #3b6357;padding-top:19px}
+.income-filter-toolbar>div{flex:1 1 190px;align-self:center;display:grid;gap:5px}
+.income-filter-toolbar>div strong{font-size:13px;color:#e3f7e9}
+.income-filter-toolbar>div small{font-size:11px;color:#92afaa}
+.income-filter-toolbar>label{display:grid;gap:6px;font-size:11px;color:#b4d4ca;font-weight:700;min-width:140px}
+.income-filter-toolbar select{background:#142a32;border:1px solid #54776c;border-radius:9px;color:#f3fcf8;min-height:40px;padding:9px 11px;max-width:100%;font-size:12px}
+.income-extra-button{border:1px solid #608b7d;border-radius:10px;background:#2a5449;color:#d7ffdd;font-size:12px;font-weight:800;padding:12px 14px;min-height:40px;transition:transform .2s,background-color .2s}
+.income-extra-button:hover{background:#376a58;transform:translateY(-2px)}
+@media(max-width:1160px){.income-highlights{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.income-feature{padding:21px 16px}.income-details{grid-template-columns:1fr}.income-highlights article{min-height:126px;padding:17px 15px}.income-highlights article strong{font-size:23px}.income-section-heading{flex-wrap:wrap}.income-filter-toolbar>div{flex-basis:100%}.income-filter-toolbar>label{flex:1 1 140px}.income-extra-button{flex:1 1 100%}}
+@media(max-width:430px){.income-highlights{gap:9px}.income-highlights article{padding:15px 12px;min-height:122px}.income-highlights article strong{font-size:19px}.income-highlights article small{font-size:9px}.income-highlights article>span{font-size:10px}.income-detail-card{padding:17px 14px}}
