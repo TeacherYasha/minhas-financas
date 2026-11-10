@@ -46,6 +46,7 @@
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
+  let incomeView='all';
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -80,7 +81,9 @@
   async function loadRows(showNotice=false) {
     const result=await googleRequest(`${rangeURL('A2:S')}?valueRenderOption=UNFORMATTED_VALUE`);
     entries=(result.values||[]).map((a,i)=>({row:i+2,id:String(a[0]||''),description:String(a[1]||''),type:String(a[2]||'Saída'),category:String(a[3]||'Outros gastos'),cents:Math.round(Number(a[4]||0)*100),registered:String(a[5]||''),due:String(a[6]||''),status:String(a[7]||'Pendente'),installment:Number(a[8]||0),installments:Number(a[9]||0),group:String(a[10]||''),recurring:String(a[11]||'Não')==='Sim',by:String(a[12]||''),created:String(a[13]||''),payer:String(a[14]||'Não informado'),payment:String(a[15]||'Não informado'),scope:String(a[16]||'Casa'),person:String(a[17]||''),quantity:String(a[18]||'')})).filter(e=>e.id);
-    if(!initialMonthResolved){initialMonthResolved=true;if(!entries.some(e=>e.due.startsWith(month))){const dates=entries.map(e=>e.due.slice(0,7)).filter(d=>/^\d{4}-\d{2}$/.test(d)).sort();if(dates.length)month=dates[dates.length-1];}}
+    // O mês atual permanece selecionado mesmo quando os lançamentos mais recentes são do mês anterior.
+    // Assim o salário recebido no fim do mês passado aparece como saldo inicial do mês de trabalho.
+    if(!initialMonthResolved)initialMonthResolved=true;
     render(); if(showNotice)toast('Registros atualizados.');
   }
   async function loadSheetTabId() {
@@ -217,8 +220,8 @@
     const box=createCell('div',null,'feature-empty');box.append(createCell('strong',title),createCell('p',detail));
     const button=createCell('button',action,'feature-action');button.type='button';button.addEventListener('click',onClick);box.append(button);container.append(box);
   }
-  function summarizeIncome(records,period){
-    const items=records.filter(e=>e.type==='Entrada'&&e.due.startsWith(period));
+  function summarizeIncome(records,period=null){
+    const items=records.filter(e=>e.type==='Entrada'&&(!period||e.due.startsWith(period)));
     const categories=new Map(),recipients=new Map([['Crispim',0],['Yasha',0],['Ambos',0],['Não informado',0]]);
     let total=0,salaries=0,received=0;
     for(const item of items){
@@ -230,6 +233,9 @@
       recipients.set(recipient,recipients.get(recipient)+item.cents);
     }
     return {items,total,salaries,other:total-salaries,received,pending:total-received,categories,recipients};
+  }
+  function incomeEntriesForView(records,period,view){
+    return records.filter(e=>e.type==='Entrada'&&(view==='all'||e.due.startsWith(period)));
   }
   function calculateMonthlyBalances(records,period){
     let opening=0,movement=0,realized=0;
@@ -244,7 +250,21 @@
     }
     return {opening,movement,closing:opening+movement,realized};
   }
-  function renderIncome(snapshot){
+  function renderIncome(snapshot,balances){
+    $('#incomeOpeningBalance').textContent=money(balances.opening);
+    $('#incomeClosingBalance').textContent=money(balances.closing);
+    $('#incomeRealizedBalance').textContent=money(balances.realized);
+    $('#incomeOpeningNote').textContent=`Saldo previsto para começar ${monthLabel(month)}; inclui os meses anteriores.`;
+    for(const [id,value] of [['incomeOpeningBalance',balances.opening],['incomeClosingBalance',balances.closing]]){
+      const el=$(`#${id}`);el.classList.toggle('negative',value<0);el.classList.toggle('positive',value>=0);
+    }
+    const all=incomeView==='all';
+    $('#incomeTotalLabel').textContent=all?'TOTAL DE ENTRADAS CADASTRADAS':'ENTRADAS DO MÊS SELECIONADO';
+    $('#incomeReceivedLabel').textContent=all?'JÁ RECEBIDO EM TODOS OS MESES':'JÁ RECEBIDO NESTE MÊS';
+    $('#incomeViewHelp').textContent=all?'Visão geral de todas as receitas cadastradas, inclusive previstas. O valor já recebido aparece separado.':`Somente entradas de ${monthLabel(month)}. O dinheiro dos meses anteriores está no saldo inicial acima.`;
+    for(const [id,active] of [['incomeAllView',all],['incomeMonthlyView',!all]]){
+      const button=$(`#${id}`);button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));
+    }
     $('#incomeMonthTotal').textContent=money(snapshot.total);
     $('#incomeSalariesTotal').textContent=money(snapshot.salaries);
     $('#incomeOtherTotal').textContent=money(snapshot.other);
@@ -256,7 +276,7 @@
     $('#incomeUnassignedRow').classList.toggle('hidden',snapshot.recipients.get('Não informado')===0);
     const container=$('#incomeCategoryBreakdown');container.replaceChildren();
     const ordered=[...snapshot.categories].sort((a,b)=>b[1]-a[1]);
-    if(!ordered.length){container.append(createCell('p','Nenhuma receita cadastrada neste mês.','income-empty-category'));return;}
+    if(!ordered.length){container.append(createCell('p',incomeView==='all'?'Nenhuma receita cadastrada até agora.':'Nenhuma nova receita neste mês. O saldo anterior continua disponível acima.','income-empty-category'));return;}
     ordered.forEach(([name,value],index)=>{
       const item=createCell('div',null,'income-category-row');
       const header=createCell('div',null,'income-category-head');
@@ -651,9 +671,9 @@
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
     const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
-    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',income:'Salários e entradas do mês',shopping:'Compras registradas',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
+    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',income:incomeView==='all'?'Histórico de entradas de todos os meses':'Salários e entradas do mês',shopping:'Compras registradas',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
     const crumbs={overview:'Visão geral',entries:'Lançamentos',income:'Salários e entradas',shopping:'Registrar compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
-    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',income:'Somente recebimentos: salários, rendas extras e outras receitas',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
+    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',income:incomeView==='all'?'Consulte salários e outras entradas cadastrados em qualquer mês':'Somente recebimentos do mês escolhido',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
     const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',income:'Nossas conquistas e receitas ✨',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
     const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',income:'Confira o dinheiro que entrou e o que ainda está para receber.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
@@ -666,7 +686,7 @@
     $('#payerColumnTitle').textContent=page==='income'?'QUEM RECEBEU':'QUEM PAGOU';
     $('#paymentColumnTitle').textContent=page==='income'?'FORMA DE RECEBIMENTO':'PAGAMENTO';
     $('#emptyRecordsTitle').textContent=page==='income'?'Nenhuma receita encontrada':'Nenhum lançamento neste mês';
-    $('#emptyRecordsDetail').textContent=page==='income'?'Registre um salário ou outra entrada, ou ajuste os filtros.':'Comece adicionando uma receita ou despesa.';
+    $('#emptyRecordsDetail').textContent=page==='income'?(incomeView==='all'?'Registre um salário ou outra entrada, ou ajuste os filtros.':'Mesmo sem entrada nova neste mês, o dinheiro anterior está no saldo inicial acima.'):'Comece adicionando uma receita ou despesa.';
     $('#incomePanel').classList.toggle('hidden',page!=='income');
     $('.carryover-flow').classList.toggle('hidden',page!=='overview');
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
@@ -680,7 +700,8 @@
     $('#installmentsPanel').classList.toggle('hidden',page!=='installments');
     $('#recurringPanel').classList.toggle('hidden',page!=='recurring');
     $('#entriesIncome').textContent=money(income);$('#entriesExpense').textContent=money(expense);$('#entriesCount').textContent=String(current.length);
-    if(page==='income')renderIncome(summarizeIncome(entries,month));
+    const incomeRows=page==='income'?incomeEntriesForView(entries,month,incomeView):null;
+    if(incomeRows)renderIncome(summarizeIncome(incomeRows),balances);
     document.querySelectorAll('#entryFilters [data-filter]').forEach(button=>button.classList.toggle('active',button.dataset.filter===entryFilter));
     if(page==='installments')renderInstallments();
     if(page==='recurring')renderRecurring();
@@ -688,7 +709,7 @@
     const personal=current.filter(e=>e.type==='Saída'&&e.scope==='Pessoal');
     $('#personalCrispimTotal').textContent=money(personal.filter(e=>e.person==='Crispim').reduce((sum,e)=>sum+e.cents,0));
     $('#personalYashaTotal').textContent=money(personal.filter(e=>e.person==='Yasha').reduce((sum,e)=>sum+e.cents,0));
-    let displayed=current.filter(e=>page==='income'?e.type==='Entrada':page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':page==='entries'&&entryFilter!=='all'?e.type===entryFilter:true);
+    let displayed=(incomeRows||current).filter(e=>page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':page==='entries'&&entryFilter!=='all'?e.type===entryFilter:true);
     if(page==='income'){
       const category=$('#incomeCategoryFilter').value,recipient=$('#incomeRecipientFilter').value;
       if(category!=='todas')displayed=displayed.filter(e=>e.category===category);
@@ -721,6 +742,8 @@
   function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#emptyAdd').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
     $('#incomeAddSalary').addEventListener('click',()=>newIncome('Salário'));
     $('#incomeAddExtra').addEventListener('click',()=>newIncome('Renda extra'));
+    $('#incomeAllView').addEventListener('click',()=>{incomeView='all';render();});
+    $('#incomeMonthlyView').addEventListener('click',()=>{incomeView='month';render();});
     $('#incomeCategoryFilter').addEventListener('change',render);
     $('#incomeRecipientFilter').addEventListener('change',render);
     $('#addInstallment').addEventListener('click',newInstallment);$('#addRecurring').addEventListener('click',newRecurring);
