@@ -356,3 +356,18 @@ body.motion-disabled .route-curtain{display:none!important}
 @media(min-width:591px){.shopping-items-head,.shopping-item{grid-template-columns:68px minmax(125px,1fr) 70px 130px 92px 27px}}
 @media(min-width:591px) and (max-width:1240px){.shopping-items-head,.shopping-item{grid-template-columns:62px minmax(115px,1fr) 66px 120px 86px 27px}}
 @media(max-width:590px){.shopping-item{grid-template-columns:39px minmax(0,1fr) minmax(105px,.7fr) 30px}}
+
+/* Saldo transportado: o restante de um mês se torna a abertura do mês seguinte. */
+.carryover-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:20px}
+.carryover-step{position:relative;min-width:0;display:flex;flex-direction:column;gap:11px;min-height:141px;padding:20px 22px;background:linear-gradient(135deg,#1c3037,#1a2b38);border:1px solid #36535b;border-radius:18px;box-shadow:0 12px 26px #070f1940;transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease}
+.carryover-step:hover{transform:translateY(-3px);border-color:#75a69b;box-shadow:0 19px 28px #07111b4a}
+.carryover-step:nth-child(2){background:linear-gradient(140deg,#24333c,#1d2a3a);border-color:#44576a}
+.carryover-step.carryover-final{background:linear-gradient(135deg,#28523e,#1b423c);border-color:#699571;box-shadow:inset 0 1px #9af1ba25,0 12px 28px #07190f45}
+.carryover-label{display:flex;align-items:center;gap:9px;font-size:10px;letter-spacing:.75px;font-weight:800;color:#c1d8d7}
+.carryover-label>span{display:grid;place-items:center;height:24px;min-width:24px;border-radius:8px;background:#31515b;color:#b7e2e1;font-size:10px}
+.carryover-final .carryover-label>span{background:#467c53;color:#e8ffd7}
+.carryover-step>strong{font:750 clamp(21px,2.4vw,29px) Outfit,Arial,sans-serif;letter-spacing:-.5px;overflow-wrap:anywhere}
+.carryover-step>small{color:#97b5b5;font-size:11px;line-height:1.45}
+.carryover-final>small{color:#b1d7c0}
+@media(max-width:960px){.carryover-flow{gap:10px}.carryover-step{padding:17px 15px;min-height:130px}.carryover-label{font-size:9px;letter-spacing:.3px}.carryover-step>strong{font-size:22px}}
+@media(max-width:660px){.carryover-flow{grid-template-columns:1fr;gap:10px}.carryover-step{min-height:0;padding:16px 18px;gap:7px}.carryover-step>strong{font-size:25px}.carryover-step>small{font-size:10px}}
