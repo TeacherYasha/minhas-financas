@@ -349,3 +349,10 @@ body.motion-disabled .route-curtain{display:none!important}
 @media(max-width:1160px){.income-highlights{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.income-feature{padding:21px 16px}.income-details{grid-template-columns:1fr}.income-highlights article{min-height:126px;padding:17px 15px}.income-highlights article strong{font-size:23px}.income-section-heading{flex-wrap:wrap}.income-filter-toolbar>div{flex-basis:100%}.income-filter-toolbar>label{flex:1 1 140px}.income-extra-button{flex:1 1 100%}}
 @media(max-width:430px){.income-highlights{gap:9px}.income-highlights article{padding:15px 12px;min-height:122px}.income-highlights article strong{font-size:19px}.income-highlights article small{font-size:9px}.income-highlights article>span{font-size:10px}.income-detail-card{padding:17px 14px}}
+
+/* Campos monetários: edição em reais com vírgula e agrupamento brasileiro. */
+#amount,.shopping-item input[aria-label="Preço unitário em reais"]{font-variant-numeric:tabular-nums;text-align:right;letter-spacing:.1px}
+#amount.money-invalid,.shopping-item input.money-invalid{border-color:#f6a39a!important;box-shadow:0 0 0 3px #f6a39a22!important}
+@media(min-width:591px){.shopping-items-head,.shopping-item{grid-template-columns:68px minmax(125px,1fr) 70px 130px 92px 27px}}
+@media(min-width:591px) and (max-width:1240px){.shopping-items-head,.shopping-item{grid-template-columns:62px minmax(115px,1fr) 66px 120px 86px 27px}}
+@media(max-width:590px){.shopping-item{grid-template-columns:39px minmax(0,1fr) minmax(105px,.7fr) 30px}}
