@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261110-22" />
+  <link rel="stylesheet" href="style.css?v=20261110-24" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261110-23" defer></script>
+  <script src="app.js?v=20261110-24" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -111,6 +111,13 @@
         <section id="shoppingPanel" class="page-feature shopping-feature hidden" aria-label="Registro detalhado de compras realizadas">
           <div class="feature-intro"><div><span class="overline">REGISTRO DE COMPRAS REALIZADAS</span><h2>Sua compra, produto por produto 🛒</h2><p>Registre os produtos e os preços de uma compra que você já fez. O total pago será lançado como uma única despesa.</p></div><button type="button" id="shoppingNew" class="feature-action">＋ Registrar compra</button></div>
           <div class="feature-stats shopping-stats"><article><span>COMPRAS EM CADASTRO</span><strong id="shoppingOpenCount">0</strong><small>Aguardando lançamento financeiro</small></article><article><span>PRODUTOS NÃO CONFERIDOS</span><strong id="shoppingPendingCount">0</strong><small>Nos registros ainda abertos</small></article><article><span>COMPRAS REGISTRADAS</span><strong id="shoppingFinishedCount">0</strong><small>Já lançadas nas finanças</small></article></div>
+          <section class="food-budget" aria-label="Limites de gastos com mercado e alimentação">
+            <div class="food-budget-head"><div><span class="overline">PLANEJAMENTO DE ALIMENTAÇÃO</span><h3>Nosso limite de mercado</h3><p>Os valores abaixo consideram somente despesas de Mercado e Alimentação já pagas. Este painel não cria novos lançamentos.</p></div><span id="foodBudgetPeriod" class="food-budget-period">Mês atual</span></div>
+            <div class="food-budget-grid">
+              <article class="food-budget-card"><div class="food-budget-label"><span>SEMANA ATUAL</span><small id="foodWeekDates">—</small></div><strong id="foodWeekSpent">R$ 0,00</strong><p>de R$ 250,00 por semana</p><div id="foodWeekBar" class="food-budget-bar" role="progressbar" aria-label="Orçamento da semana utilizado" aria-valuemin="0" aria-valuemax="250" aria-valuenow="0"><i id="foodWeekFill"></i></div><small id="foodWeekRemaining" class="food-budget-remaining">R$ 250,00 disponíveis</small></article>
+              <article class="food-budget-card"><div class="food-budget-label"><span>MÊS ATUAL</span><small>Limite total</small></div><strong id="foodMonthSpent">R$ 0,00</strong><p>de R$ 1.000,00 por mês</p><div id="foodMonthBar" class="food-budget-bar" role="progressbar" aria-label="Orçamento do mês utilizado" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0"><i id="foodMonthFill"></i></div><small id="foodMonthRemaining" class="food-budget-remaining">R$ 1.000,00 disponíveis</small></article>
+            </div>
+          </section>
           <div class="shopping-layout">
             <aside class="shopping-list-rail"><div class="shopping-rail-head"><h3>Compras cadastradas</h3><span id="shoppingListCount">0 compras</span></div><div id="shoppingListCards" class="shopping-list-cards"></div></aside>
             <div id="shoppingEditor" class="shopping-editor">
