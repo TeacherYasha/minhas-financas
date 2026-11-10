@@ -191,6 +191,47 @@
     const box=createCell('div',null,'feature-empty');box.append(createCell('strong',title),createCell('p',detail));
     const button=createCell('button',action,'feature-action');button.type='button';button.addEventListener('click',onClick);box.append(button);container.append(box);
   }
+  function summarizeIncome(records,period){
+    const items=records.filter(e=>e.type==='Entrada'&&e.due.startsWith(period));
+    const categories=new Map(),recipients=new Map([['Crispim',0],['Yasha',0],['Ambos',0],['Não informado',0]]);
+    let total=0,salaries=0,received=0;
+    for(const item of items){
+      total+=item.cents;
+      if(item.category==='Salário')salaries+=item.cents;
+      if(item.status==='Recebido')received+=item.cents;
+      categories.set(item.category,(categories.get(item.category)||0)+item.cents);
+      const recipient=recipients.has(item.payer)?item.payer:'Não informado';
+      recipients.set(recipient,recipients.get(recipient)+item.cents);
+    }
+    return {items,total,salaries,other:total-salaries,received,pending:total-received,categories,recipients};
+  }
+  function renderIncome(snapshot){
+    $('#incomeMonthTotal').textContent=money(snapshot.total);
+    $('#incomeSalariesTotal').textContent=money(snapshot.salaries);
+    $('#incomeOtherTotal').textContent=money(snapshot.other);
+    $('#incomeReceivedTotal').textContent=money(snapshot.received);
+    $('#incomePendingNote').textContent=`${money(snapshot.pending)} ainda a receber`;
+    for(const [name,id] of [['Crispim','incomeCrispimTotal'],['Yasha','incomeYashaTotal'],['Ambos','incomeBothTotal'],['Não informado','incomeUnassignedTotal']]){
+      $(`#${id}`).textContent=money(snapshot.recipients.get(name));
+    }
+    $('#incomeUnassignedRow').classList.toggle('hidden',snapshot.recipients.get('Não informado')===0);
+    const container=$('#incomeCategoryBreakdown');container.replaceChildren();
+    const ordered=[...snapshot.categories].sort((a,b)=>b[1]-a[1]);
+    if(!ordered.length){container.append(createCell('p','Nenhuma receita cadastrada neste mês.','income-empty-category'));return;}
+    ordered.forEach(([name,value],index)=>{
+      const item=createCell('div',null,'income-category-row');
+      const header=createCell('div',null,'income-category-head');
+      header.append(createCell('span',name),createCell('strong',money(value)));
+      const track=createCell('div',null,'income-category-track'),bar=createCell('i');
+      bar.style.width=`${snapshot.total?value/snapshot.total*100:0}%`;
+      bar.style.background=['#b8f37d','#66d6ed','#daa4ff','#f8c47c'][index%4];
+      track.append(bar);item.append(header,track);container.append(item);
+    });
+  }
+  function newIncome(category='Salário'){
+    openModal('Entrada');
+    $('#category').value=INCOME_CATEGORIES.includes(category)?category:'Outras entradas';
+  }
   const cloneShopping = list => ({...list,items:list.items.map(item=>({...item}))});
   const blankShoppingItem = () => ({id:makeId(),name:'',qty:1,unitCents:null,bought:false});
   function shoppingTotals(list){
@@ -448,11 +489,11 @@
     toast(next==='on'?'Animações ativadas para este navegador. Experimente trocar de aba.':'Animações reduzidas neste navegador.');
   }
   const navTheme = {
-    overview:['#2c513c','#c9f292'],entries:['#244c61','#86dafa'],shopping:['#235246','#a6f7d7'],
+    overview:['#2c513c','#c9f292'],entries:['#244c61','#86dafa'],income:['#225042','#a7f0b9'],shopping:['#235246','#a6f7d7'],
     installments:['#493c62','#d7a8ff'],recurring:['#554330','#ffd29a'],personal:['#553a54','#f6bbdf']
   };
   const routeLabels={
-    overview:['◫','Visão geral'],entries:['≡','Lançamentos'],shopping:['🛒','Registrar compras'],
+    overview:['◫','Visão geral'],entries:['≡','Lançamentos'],income:['↙','Salários e entradas'],shopping:['🛒','Registrar compras'],
     installments:['▦','Parcelamentos'],recurring:['◷','Contas fixas'],personal:['♡','Gastos pessoais']
   };
   function syncNavIndicator(immediate=false){
@@ -486,6 +527,7 @@
     const groups={
       overview:'.kpis .kpi, .insights .panel, .records',
       entries:'#entriesPanel .feature-stats article, #entriesPanel .filter-bar, .records',
+      income:'#incomePanel .income-highlights article, #incomePanel .income-detail-card, .records',
       shopping:'#shoppingPanel .shopping-stats article, #shoppingPanel .shopping-list-rail, #shoppingPanel .shopping-editor',
       installments:'#installmentsPanel .feature-stats article, #installmentsPanel .plan-card',
       recurring:'#recurringPanel .feature-stats article, #recurringPanel .bill-card',
@@ -567,16 +609,23 @@
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
     const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
-    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',shopping:'Compras registradas',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
-    const crumbs={overview:'Visão geral',entries:'Lançamentos',shopping:'Registrar compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
-    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
-    const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
-    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
+    const titles={overview:'Últimos lançamentos',entries:'Extrato do mês',income:'Salários e entradas do mês',shopping:'Compras registradas',installments:'Parcelas do mês',recurring:'Contas fixas do mês',personal:'Gastos pessoais do mês'};
+    const crumbs={overview:'Visão geral',entries:'Lançamentos',income:'Salários e entradas',shopping:'Registrar compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
+    const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',income:'Somente recebimentos: salários, rendas extras e outras receitas',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
+    const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',income:'Nossas conquistas e receitas ✨',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
+    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',income:'Confira o dinheiro que entrou e o que ainda está para receber.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
     $('#recordsSubtitle').textContent=subtitles[page];
     $('#pageTitle').textContent=headings[page];
     $('#pageSubtitle').textContent=descriptions[page];
-    document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',shopping:'CADASTRO DE COMPRAS REALIZADAS',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
+    document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',income:'RECEITAS DA FAMÍLIA',shopping:'CADASTRO DE COMPRAS REALIZADAS',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
+    $('#newEntry').textContent=page==='income'?'＋ Nova receita':'＋ Novo lançamento';
+    $('#emptyAdd').textContent=page==='income'?'＋ Registrar receita':'＋ Adicionar lançamento';
+    $('#payerColumnTitle').textContent=page==='income'?'QUEM RECEBEU':'QUEM PAGOU';
+    $('#paymentColumnTitle').textContent=page==='income'?'FORMA DE RECEBIMENTO':'PAGAMENTO';
+    $('#emptyRecordsTitle').textContent=page==='income'?'Nenhuma receita encontrada':'Nenhum lançamento neste mês';
+    $('#emptyRecordsDetail').textContent=page==='income'?'Registre um salário ou outra entrada, ou ajuste os filtros.':'Comece adicionando uma receita ou despesa.';
+    $('#incomePanel').classList.toggle('hidden',page!=='income');
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
     $('#shoppingPanel').classList.toggle('hidden',page!=='shopping');
     $('.period-bar').classList.toggle('hidden',page==='shopping');
@@ -588,6 +637,7 @@
     $('#installmentsPanel').classList.toggle('hidden',page!=='installments');
     $('#recurringPanel').classList.toggle('hidden',page!=='recurring');
     $('#entriesIncome').textContent=money(income);$('#entriesExpense').textContent=money(expense);$('#entriesCount').textContent=String(current.length);
+    if(page==='income')renderIncome(summarizeIncome(entries,month));
     document.querySelectorAll('#entryFilters [data-filter]').forEach(button=>button.classList.toggle('active',button.dataset.filter===entryFilter));
     if(page==='installments')renderInstallments();
     if(page==='recurring')renderRecurring();
@@ -595,7 +645,12 @@
     const personal=current.filter(e=>e.type==='Saída'&&e.scope==='Pessoal');
     $('#personalCrispimTotal').textContent=money(personal.filter(e=>e.person==='Crispim').reduce((sum,e)=>sum+e.cents,0));
     $('#personalYashaTotal').textContent=money(personal.filter(e=>e.person==='Yasha').reduce((sum,e)=>sum+e.cents,0));
-    let displayed=current.filter(e=>page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':page==='entries'&&entryFilter!=='all'?e.type===entryFilter:true);
+    let displayed=current.filter(e=>page==='income'?e.type==='Entrada':page==='personal'?e.type==='Saída'&&e.scope==='Pessoal':page==='entries'&&entryFilter!=='all'?e.type===entryFilter:true);
+    if(page==='income'){
+      const category=$('#incomeCategoryFilter').value,recipient=$('#incomeRecipientFilter').value;
+      if(category!=='todas')displayed=displayed.filter(e=>e.category===category);
+      if(recipient!=='todos')displayed=displayed.filter(e=>e.payer===recipient);
+    }
     if(page==='personal'&&$('#personalPersonFilter').value!=='todos')displayed=displayed.filter(e=>e.person===$('#personalPersonFilter').value);
     displayed.sort((a,b)=>b.due.localeCompare(a.due)||b.created.localeCompare(a.created));
     const query=page==='overview'?'':$('#search').value.trim().toLocaleLowerCase('pt-BR');if(query)displayed=displayed.filter(e=>`${e.description} ${e.category} ${e.payer} ${e.payment} ${e.person}`.toLocaleLowerCase('pt-BR').includes(query));
@@ -620,7 +675,11 @@
       tr.append(nameTd,catTd,payerTd,paymentTd,dateTd,amountTd,statusTd,actions);tbody.append(tr);
     }
   }
-  function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>openModal());$('#emptyAdd').addEventListener('click',()=>openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
+  function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#emptyAdd').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
+    $('#incomeAddSalary').addEventListener('click',()=>newIncome('Salário'));
+    $('#incomeAddExtra').addEventListener('click',()=>newIncome('Renda extra'));
+    $('#incomeCategoryFilter').addEventListener('change',render);
+    $('#incomeRecipientFilter').addEventListener('change',render);
     $('#addInstallment').addEventListener('click',newInstallment);$('#addRecurring').addEventListener('click',newRecurring);
     $('#entryFilters').addEventListener('click',event=>{const button=event.target.closest('[data-filter]');if(!button)return;entryFilter=button.dataset.filter;render();});
     $('#viewAllEntries').addEventListener('click',()=>navigateTo('entries'));
