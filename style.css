@@ -61,7 +61,7 @@ form input:focus,form select:focus{box-shadow:0 0 0 3px #a0d88726}
 .personal-emoji{position:absolute;right:23px;top:16px;font-size:33px;opacity:.7;color:#d3eece}
 @keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popIn{from{opacity:0;transform:translateY(15px) scale(.975)}to{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes slideToast{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideToast{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
 @media(max-width:760px){.kpi,.panel{border-radius:17px}.personal-panel{padding:20px 15px}.personal-intro{align-items:start;flex-direction:column}.personal-cards{gap:9px}.personal-card{padding:17px 15px;min-height:117px}.personal-card strong{font-size:21px}.personal-emoji{right:12px;top:9px;font-size:24px}.main-content>.headline,.kpis,.insights,.records,.personal-panel{animation-duration:.3s}}
 @media(max-width:390px){.personal-cards{grid-template-columns:1fr}.personal-card{min-height:94px}.personal-card strong{font-size:22px}}
 @media(prefers-reduced-motion:reduce){body:not(.motion-enabled) *,body:not(.motion-enabled) *::before,body:not(.motion-enabled) *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -389,3 +389,6 @@ body.motion-disabled .route-curtain{display:none!important}
 .income-view-switch button:active{transform:scale(.96)}
 .income-view-switch button:focus-visible{outline:2px solid #d4fbb5;outline-offset:2px}
 @media(max-width:760px){.income-balance-bridge{grid-template-columns:1fr;gap:10px}.income-balance-bridge>div{padding:17px 18px;gap:8px}.income-view-switch{width:100%;display:grid;grid-template-columns:1fr 1fr}.income-view-switch button{padding:11px 8px;font-size:11px}}
+
+/* Avisos de login, atualização e salvamento: centralizados no topo. */
+.toast{left:50%;right:auto;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;min-width:min(260px,calc(100vw - 28px));max-width:min(450px,calc(100vw - 28px));text-align:center;line-height:1.55;overflow-wrap:anywhere;border-radius:13px;box-shadow:0 15px 40px #0008}
