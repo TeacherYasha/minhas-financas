@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261110-16" />
+  <link rel="stylesheet" href="style.css?v=20261110-17" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261110-16" defer></script>
+  <script src="app.js?v=20261110-17" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -59,6 +59,11 @@
       <div class="main-content">
         <div class="headline"><div><span class="overline">SEU PAINEL FINANCEIRO</span><h1 id="pageTitle">Bem-vindo às suas finanças <span>✦</span></h1><p id="pageSubtitle">Uma visão clara de tudo que acontece com o dinheiro da casa.</p></div><button id="newEntry" class="button main-button">＋ Novo lançamento</button></div>
         <div class="period-bar"><span>▦ &nbsp; Período de análise</span><div class="period-control"><button id="prevMonth" aria-label="Mês anterior">‹</button><strong id="monthLabel"></strong><button id="nextMonth" aria-label="Próximo mês">›</button></div><button id="currentMonth" class="text-action">Mês atual</button><button id="refresh" class="text-action refresh">↻ Atualizar</button></div>
+        <section class="carryover-flow" aria-label="Saldo transportado entre os meses">
+          <article class="carryover-step"><div class="carryover-label"><span>01</span> SALDO INICIAL DO MÊS</div><strong id="openingBalance">R$ 0,00</strong><small>Acumulado previsto dos meses anteriores</small></article>
+          <article class="carryover-step"><div class="carryover-label"><span>02</span> RESULTADO DESTE MÊS</div><strong id="monthlyMovement">R$ 0,00</strong><small>Entradas previstas menos despesas previstas</small></article>
+          <article class="carryover-step carryover-final"><div class="carryover-label"><span>03</span> SALDO PARA O PRÓXIMO MÊS</div><strong id="closingBalance">R$ 0,00</strong><small>Previsão após os lançamentos deste mês</small></article>
+        </section>
         <section class="kpis"><article class="kpi balance"><div class="kpi-top">SALDO REAL ACUMULADO <span>◉</span></div><h2 id="realBalance">R$ 0,00</h2><div class="kpi-note"><b>✓ Efetivado</b> Recebido menos pago</div></article><article class="kpi"><div class="kpi-top">ENTRADAS DO MÊS <span class="icon green">↙</span></div><h2 id="incomeTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot green"></i> Receitas previstas</div></article><article class="kpi"><div class="kpi-top">SAÍDAS DO MÊS <span class="icon orange">↗</span></div><h2 id="expenseTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot orange"></i> Despesas previstas</div></article><article class="kpi"><div class="kpi-top">CONTAS A PAGAR <span class="icon purple">▤</span></div><h2 id="pendingTotal">R$ 0,00</h2><div class="kpi-note"><i class="dot purple"></i> Pendências deste mês</div></article></section>
         <div class="insights"><section class="panel categories"><div class="panel-head"><div><h3>Despesas por categoria</h3><p>Para onde está indo o dinheiro</p></div><span id="categoryCount" class="chip">0 categorias</span></div><div class="chart-body"><div class="donut" id="donut"><div><small>DESPESAS DO MÊS</small><strong id="chartTotal">R$ 0,00</strong></div></div><div id="categoryLegend" class="legend"></div></div></section><section class="panel summary"><div class="panel-head"><div><h3>Resumo mensal</h3><p>O que entra e o que sai</p></div><span class="chip" id="summaryMonth"></span></div><div class="summary-result"><span>Resultado previsto</span><strong id="forecast">R$ 0,00</strong></div><div class="summary-progress"><span id="incomeBar"></span></div><div class="summary-labels"><span><i class="dot green"></i> Entradas</span><span><i class="dot orange"></i> Saídas</span></div><div class="panel-divider"></div><strong class="quick-title">Acesso rápido</strong><div class="quick-buttons"><button id="newIncome"><span>↙</span> Receita ＋</button><button id="newExpense"><span>↗</span> Despesa ＋</button></div><p class="sync-note">↻ &nbsp; Os lançamentos ficam sincronizados entre vocês dois.</p></section></div>
         <section id="incomePanel" class="page-feature income-feature hidden" aria-label="Salários e outras entradas de dinheiro">
