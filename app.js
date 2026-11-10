@@ -312,10 +312,20 @@
   function shoppingNewList(){
     if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return false;
     shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
-    shoppingDirty=true;shoppingRevision++;
+    // Abrir o formulário vazio não equivale a alterar uma compra.
+    shoppingDirty=false;shoppingRevision++;
     shoppingView='new';renderShopping();
     if(page==='shopping'){navigateTo('shopping','shopping-new');$('#shoppingTitle').focus();$('#shoppingTitle').select();}
     return true;
+  }
+  function shoppingOpenNew(){
+    // Voltar pelo submenu deve preservar o rascunho em andamento, sem descartá-lo.
+    if(shoppingDraft&&!shoppingDraft.row&&shoppingDraft.status!=='Finalizada'){
+      shoppingView='new';
+      if(page==='shopping')navigateTo('shopping','shopping-new');
+      return true;
+    }
+    return shoppingNewList();
   }
   function shoppingSelect(id){
     if(shoppingDraft?.id===id)return;
@@ -415,7 +425,7 @@
     updateShoppingTotals();
   }
   function renderShopping(){
-    $('#shoppingOpenCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').length+(shoppingDraft&&!shoppingDraft.row&&shoppingDraft.status!=='Finalizada'?1:0));
+    $('#shoppingOpenCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').length);
     $('#shoppingPendingCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').reduce((sum,l)=>sum+l.items.filter(i=>i.name.trim()&&!i.bought).length,0));
     $('#shoppingFinishedCount').textContent=String(shoppingLists.filter(l=>l.status==='Finalizada').length);
     $('#shoppingListCount').textContent=`${shoppingLists.length} ${shoppingLists.length===1?'compra':'compras'}`;
@@ -435,7 +445,7 @@
     for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked;
     $('#shoppingAddItem').disabled=locked;$('#shoppingSave').disabled=locked||shoppingSaving;$('#shoppingFinish').disabled=locked||shoppingSaving;
     $('#shoppingDuplicate').disabled=false;
-    $('#shoppingSavedStatus').textContent=locked?'✓ Compra lançada nas finanças':shoppingDirty?'Alterações ainda não salvas':'✓ Produtos salvos no Google';
+    $('#shoppingSavedStatus').textContent=locked?'✓ Compra lançada nas finanças':shoppingDirty?'Alterações ainda não salvas':!list.row?'Nova compra pronta para preencher':'✓ Produtos salvos no Google';
     $('#shoppingSavedStatus').classList.toggle('unsaved',shoppingDirty&&!locked);
     $('#shoppingFinish').textContent=locked?'✓ Compra já registrada':'✓ Registrar compra nas finanças';
     shoppingRenderItems();
@@ -802,7 +812,7 @@
         openNavGroup(null);syncNavMenu();return;
       }
       if(key==='shopping-new'){
-        if(!shoppingNewList())return;
+        if(!shoppingOpenNew())return;
         if(page!=='shopping')navigateTo('shopping','shopping-new');
         return;
       }
