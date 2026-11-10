@@ -54,10 +54,12 @@ O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com 
 
 ## Áreas do site
 
+O menu lateral usa apenas quatro grupos principais, com submenus expansíveis: **Geral**; **Entrada de dinheiro** → Salários e Renda extra; **Contas** → Contas fixas, Parcelamentos e Gastos pessoais; **Registro de compras** → Nova compra e Histórico de compras. Clicar no título de um grupo abre sua visão geral, enquanto os subitens vão diretamente à área ou ao filtro correspondente. O extrato completo continua acessível pelo botão *Ver todos* na visão geral. As animações e o estado ativo acompanham as trocas de seção, inclusive no celular.
+
 - **Visão geral:** saldo inicial transportado dos meses anteriores, resultado do mês, saldo previsto para o próximo mês, saldo real efetivado, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
 - **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
 - **Salários e entradas:** área exclusiva para dinheiro já recebido, com **Todos os meses** (histórico integral das receitas) ou **Mês selecionado** (receitas daquele período). Quatro indicadores: total das receitas, salários, outras entradas e **saldo disponível** (receitas confirmadas menos despesas pagas até o mês selecionado). Não há mais o cartão redundante de "Já recebido" nem a previsão "Ainda a receber". Receitas novas são automaticamente marcadas como recebidas e não podem ser programadas como parcelas, recorrências ou lançadas com data futura. Exibe também o saldo transportado dos meses anteriores, totais por pessoa (Crispim, Yasha ou Ambos), filtros e botões de cadastro. Os registros continuam na mesma aba `Lancamentos`, sem cópias.
-- **Registrar compras:** cadastro de compras já realizadas, detalhamento de produtos, quantidades, preços pagos, seleção dos itens adquiridos, total automático e lançamento agrupado de uma única despesa.
+- **Registro de compras:** **Nova compra** abre somente o editor de produtos (sem a lista lateral), com quantidades, preços pagos e lançamento de uma despesa única. **Histórico de compras** prioriza a lista das compras anteriores e abre os detalhes quando um registro é selecionado. A visão geral reúne as duas áreas.
 - **Parcelamentos:** compras agrupadas, total, saldo pendente, barra de progresso, próximos vencimentos e controle individual de cada parcela.
 - **Contas fixas:** lista de vencimentos recorrentes e contas já classificadas como aluguel, energia, água, internet ou contas do mês, com totais e confirmação de pagamento por conta. Exibir uma conta nessa área não a transforma automaticamente em recorrente.
 - **Gastos pessoais:** despesas individuais de Crispim e Yasha, com filtros e totais separados.
