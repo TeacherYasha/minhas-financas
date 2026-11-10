@@ -138,12 +138,13 @@
   }
   function cellValuesFromForm() {
     const description=$('#description').value.trim(),cents=parseBRLCents($('#amount').value),due=$('#dueDate').value;
-    const installments=Number($('#installments').value),recurring=$('#recurring').checked;
+    const installments=entryKind==='Entrada'?1:Number($('#installments').value),recurring=entryKind==='Entrada'?false:$('#recurring').checked;
     if(!description || !Number.isSafeInteger(cents) || cents<=0 || cents>100000000000 || !/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isInteger(installments)||installments<1||installments>60||(recurring&&installments>1))throw Error('Confira a descrição, o valor em reais, a data e o número de parcelas. Use R$ 100,00, por exemplo.');
+    if(entryKind==='Entrada'&&due>nowISO())throw Error('Cadastre a receita somente depois que o dinheiro entrar. A data do recebimento não pode estar no futuro.');
     const scope=entryKind==='Entrada'?'Casa':$('#scope').value,person=scope==='Pessoal'?$('#person').value:'';
     const payer=$('#payer').value,payment=$('#payment').value,quantity=$('#quantity').value.trim();
     if(!payer || !payment || (scope==='Pessoal'&&!person))throw Error('Informe quem pagou ou recebeu, a forma de pagamento e, para gastos pessoais, de quem é a despesa.');
-    return {description,cents,due,installments,recurring,category:$('#category').value,settled:$('#settled').checked,payer,payment,scope,person,quantity};
+    return {description,cents,due,installments,recurring,category:$('#category').value,settled:entryKind==='Entrada'?true:$('#settled').checked,payer,payment,scope,person,quantity};
   }
   function makeRow({id,description,cents,due,category,settled,installment,installments,group,recurring,registered,created,payer,payment,scope,person,quantity,by}) {
     return [id,description,entryKind,category,cents/100,registered,due,settled?(entryKind==='Entrada'?'Recebido':'Pago'):'Pendente',installment||'',installments||'',group||'',recurring?'Sim':'Não',by||profile.email,created,payer||'',payment||'Não informado',scope||'Casa',person||'',quantity||''];
@@ -209,7 +210,11 @@
     entryKind=kind;$('#typeExpense').className=kind==='Saída'?'selected':'';$('#typeIncome').className=kind==='Entrada'?'income selected':'income';
     $('#scope').disabled=kind==='Entrada';if(kind==='Entrada')$('#scope').value='Casa';
     $('#payerLabel').firstChild.textContent=kind==='Entrada'?'Quem recebeu?':'Quem pagou?';
-    $('#settledLabel').textContent=kind==='Entrada'?'Já foi recebido':'Já foi pago';updateScope();
+    if(kind==='Entrada'&&!editingId){$('#recurring').checked=false;$('#installments').value='1';}
+    $('#dueDate').max=kind==='Entrada'?nowISO():'';
+    if(!editingId)$('#settled').checked=kind==='Entrada';
+    for(const input of ['#settled','#recurring','#installments'])$(input).closest('label').classList.toggle('hidden',kind==='Entrada');
+    $('#settledLabel').textContent=kind==='Entrada'?'Recebido':'Já foi pago';updateScope();updateFormHints();
   }
   function updateFormHints(){const multiple=Number($('#installments').value)>1,rec=$('#recurring').checked;$('#installments').disabled=rec||Boolean(editingId);$('#settled').disabled=(multiple||rec)&&!editingId;$('#formHelp').textContent=editingId?'A alteração será aplicada somente a este registro.':rec?'A conta será criada nos próximos 24 meses.':multiple?'O valor total será dividido automaticamente entre os meses.':'';}
   function createCell(tag,text,className){const el=document.createElement(tag);if(text!==undefined&&text!==null)el.textContent=String(text);if(className)el.className=className;return el;}
@@ -253,23 +258,23 @@
   function renderIncome(snapshot,balances){
     $('#incomeOpeningBalance').textContent=money(balances.opening);
     $('#incomeClosingBalance').textContent=money(balances.closing);
-    $('#incomeRealizedBalance').textContent=money(balances.realized);
+    $('#incomeAvailableBalance').textContent=money(balances.realized);
+    $('#incomeAvailableNote').textContent=`Até ${monthLabel(month)} · receitas recebidas menos despesas pagas`;
+    $('#incomeAvailableBalance').classList.toggle('negative',balances.realized<0);
+    $('#incomeAvailableBalance').classList.toggle('positive',balances.realized>=0);
     $('#incomeOpeningNote').textContent=`Saldo previsto para começar ${monthLabel(month)}; inclui os meses anteriores.`;
     for(const [id,value] of [['incomeOpeningBalance',balances.opening],['incomeClosingBalance',balances.closing]]){
       const el=$(`#${id}`);el.classList.toggle('negative',value<0);el.classList.toggle('positive',value>=0);
     }
     const all=incomeView==='all';
-    $('#incomeTotalLabel').textContent=all?'TOTAL DE ENTRADAS CADASTRADAS':'ENTRADAS DO MÊS SELECIONADO';
-    $('#incomeReceivedLabel').textContent=all?'JÁ RECEBIDO EM TODOS OS MESES':'JÁ RECEBIDO NESTE MÊS';
-    $('#incomeViewHelp').textContent=all?'Visão geral de todas as receitas cadastradas, inclusive previstas. O valor já recebido aparece separado.':`Somente entradas de ${monthLabel(month)}. O dinheiro dos meses anteriores está no saldo inicial acima.`;
+    $('#incomeTotalLabel').textContent=all?'TOTAL DE RECEITAS':'RECEITAS DO MÊS SELECIONADO';
+    $('#incomeViewHelp').textContent=all?'Todo o dinheiro registrado desde o início. O saldo disponível considera os pagamentos até o mês escolhido.':`Receitas recebidas em ${monthLabel(month)}. O dinheiro dos meses anteriores permanece no saldo disponível.`;
     for(const [id,active] of [['incomeAllView',all],['incomeMonthlyView',!all]]){
       const button=$(`#${id}`);button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));
     }
     $('#incomeMonthTotal').textContent=money(snapshot.total);
     $('#incomeSalariesTotal').textContent=money(snapshot.salaries);
     $('#incomeOtherTotal').textContent=money(snapshot.other);
-    $('#incomeReceivedTotal').textContent=money(snapshot.received);
-    $('#incomePendingNote').textContent=`${money(snapshot.pending)} ainda a receber`;
     for(const [name,id] of [['Crispim','incomeCrispimTotal'],['Yasha','incomeYashaTotal'],['Ambos','incomeBothTotal'],['Não informado','incomeUnassignedTotal']]){
       $(`#${id}`).textContent=money(snapshot.recipients.get(name));
     }
@@ -675,7 +680,7 @@
     const crumbs={overview:'Visão geral',entries:'Lançamentos',income:'Salários e entradas',shopping:'Registrar compras',installments:'Parcelamentos',recurring:'Contas fixas',personal:'Gastos pessoais'};
     const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',income:incomeView==='all'?'Consulte salários e outras entradas cadastrados em qualquer mês':'Somente recebimentos do mês escolhido',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
     const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',income:'Nossas conquistas e receitas ✨',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
-    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',income:'Confira o dinheiro que entrou e o que ainda está para receber.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
+    const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',income:'Acompanhe os salários e outras entradas que vocês já receberam.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
     $('#recordsSubtitle').textContent=subtitles[page];
     $('#pageTitle').textContent=headings[page];
