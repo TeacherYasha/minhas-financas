@@ -50,6 +50,8 @@ A seção **Registrar compras** foi pensada para informar os produtos e valores 
 
 O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com as quantidades e os preços pagos e marcar os itens efetivamente adquiridos. O primeiro total soma todos os produtos com preço informado; o segundo soma somente os adquiridos. **Quando o usuário registra a compra nas finanças, é criada uma única despesa paga na categoria Mercado**, com a soma dos produtos marcados. O detalhamento fica armazenado no registro da compra, que depois estará disponível para consulta. O botão **Reutilizar produtos em nova compra** copia os produtos para facilitar o cadastro de compras semelhantes.
 
+O painel **Nosso limite de mercado**, dentro de Registro de compras, acompanha o teto de **R$ 250 por semana (segunda a domingo)** e **R$ 1.000 por mês**. Considera uma única vez os lançamentos de despesas **pagas** nas categorias Mercado e Alimentação, inclusive compras registradas pela lista de produtos. Mostra os valores usados e restantes, destacando excessos; é apenas informativo e não gera nem duplica lançamentos.
+
 **Importante:** **Salvar produtos** guarda o registro em andamento, mas não altera o saldo financeiro. Para contabilizar a despesa da compra já realizada, clique em **Registrar compra nas finanças**. A gravação usa uma requisição ao Google Sheets com a inclusão da despesa e a conclusão do registro na mesma operação, além de verificar previamente o ID da compra para reduzir o risco de duplicidade. Evite registrar simultaneamente a mesma compra em dois dispositivos.
 
 ## Áreas do site
