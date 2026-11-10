@@ -40,6 +40,8 @@ As colunas O:S acrescentam **Quem pagou**, **Forma de pagamento**, **Tipo de gas
 
 Formas de pagamento: Pix, Dinheiro, Débito, Crédito, Transferência, Boleto e Não informado. Nos registros históricos importados da planilha de setembro, a forma é marcada como Não informado, porque o arquivo original não contém essa informação.
 
+**Valores em reais:** nos formulários de receitas, despesas e compras, os campos monetários aceitam valores como `100`, `100,50` e `R$ 1.234,56`. Ao sair do campo, a exibição é padronizada como `R$ 100,00` ou `R$ 1.234,56`. Os valores são convertidos em centavos no navegador e continuam gravados como números na planilha, sem alterar dados antigos.
+
 O cadastro de uma compra parcelada cria um registro por mês e divide os centavos sem perda de arredondamento. Contas recorrentes são registradas para os próximos 24 meses.
 
 ### Registro detalhado de compras realizadas
