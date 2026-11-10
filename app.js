@@ -10,6 +10,32 @@
   const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
   const $ = (s) => document.querySelector(s);
   const money = (cents) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);
+  function parseBRLCents(raw){
+    const value=String(raw??'').trim().replace(/\s/g,'').replace(/^R\$/i,'');
+    if(!value)return null;
+    let whole='',fraction='';
+    if(/^\d+$/.test(value))whole=value;
+    else if(/^\d+[,\.]\d{1,2}$/.test(value)){
+      const match=value.match(/^(\d+)[,\.](\d{1,2})$/);whole=match[1];fraction=match[2];
+    }else if(/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(value)){
+      const parts=value.split(',');whole=parts[0].replace(/\./g,'');fraction=parts[1]||'';
+    }else return NaN;
+    const cents=Number(whole)*100+Number(fraction.padEnd(2,'0'));
+    return Number.isSafeInteger(cents)?cents:NaN;
+  }
+  function formatBRLField(input){
+    const cents=parseBRLCents(input.value);
+    if(cents===null){input.value='';input.classList.remove('money-invalid');return;}
+    if(!Number.isSafeInteger(cents)||cents<0){input.classList.add('money-invalid');return;}
+    input.value=money(cents);input.classList.remove('money-invalid');
+  }
+  function prepareBRLField(input){
+    input.type='text';input.inputMode='decimal';input.placeholder='R$ 0,00';input.autocomplete='off';
+    input.addEventListener('focus',()=>input.select());
+    input.addEventListener('input',()=>input.classList.remove('money-invalid'));
+    input.addEventListener('blur',()=>formatBRLField(input));
+    return input;
+  }
   const nowISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   const currentMonth = () => nowISO().slice(0,7);
   const monthShift = (key,move) => { const [y,m]=key.split('-').map(Number),d=new Date(y,m-1+move,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
@@ -108,9 +134,9 @@
     await googleRequest(`${rangeURL('A:S')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:records})});
   }
   function cellValuesFromForm() {
-    const description=$('#description').value.trim(),value=Number($('#amount').value),cents=Math.round(value*100),due=$('#dueDate').value;
+    const description=$('#description').value.trim(),cents=parseBRLCents($('#amount').value),due=$('#dueDate').value;
     const installments=Number($('#installments').value),recurring=$('#recurring').checked;
-    if(!description || !Number.isFinite(cents) || cents<=0 || cents>100000000000 || !/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isInteger(installments)||installments<1||installments>60||(recurring&&installments>1))throw Error('Confira a descrição, o valor, a data e o número de parcelas.');
+    if(!description || !Number.isSafeInteger(cents) || cents<=0 || cents>100000000000 || !/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isInteger(installments)||installments<1||installments>60||(recurring&&installments>1))throw Error('Confira a descrição, o valor em reais, a data e o número de parcelas. Use R$ 100,00, por exemplo.');
     const scope=entryKind==='Entrada'?'Casa':$('#scope').value,person=scope==='Pessoal'?$('#person').value:'';
     const payer=$('#payer').value,payment=$('#payment').value,quantity=$('#quantity').value.trim();
     if(!payer || !payment || (scope==='Pessoal'&&!person))throw Error('Informe quem pagou ou recebeu, a forma de pagamento e, para gastos pessoais, de quem é a despesa.');
@@ -153,7 +179,7 @@
     let record=null;
     if(id){
       record=entries.find(e=>e.id===id);if(!record)return;entryKind=record.type;
-      $('#description').value=record.description;$('#amount').value=(record.cents/100).toFixed(2);$('#dueDate').value=record.due;
+      $('#description').value=record.description;$('#amount').value=money(record.cents);$('#dueDate').value=record.due;
       $('#recurring').checked=record.recurring;$('#installments').value=record.installments||1;$('#settled').checked=record.status!=='Pendente';
       $('#scope').value=record.scope;$('#person').value=record.person;$('#payer').value=['Crispim','Yasha','Ambos'].includes(record.payer)?record.payer:'';
       $('#payment').value=record.payment||'Não informado';$('#quantity').value=record.quantity;
@@ -332,11 +358,11 @@
       bought.addEventListener('change',()=>{item.bought=bought.checked;row.classList.toggle('checked',item.bought);shoppingChanged();});boughtWrap.append(bought);
       const name=createCell('input');name.type='text';name.placeholder='Ex.: Arroz 5 kg';name.maxLength=120;name.value=item.name;name.disabled=locked;name.setAttribute('aria-label','Nome do produto');name.addEventListener('input',()=>{item.name=name.value;shoppingChanged();});
       const qty=createCell('input');qty.type='number';qty.min='0.01';qty.max='100000';qty.step='0.01';qty.inputMode='decimal';qty.value=String(item.qty);qty.disabled=locked;qty.setAttribute('aria-label','Quantidade');
-      const price=createCell('input');price.type='number';price.min='0';price.max='10000000';price.step='0.01';price.inputMode='decimal';price.placeholder='0,00';price.value=item.unitCents===null?'':(item.unitCents/100).toFixed(2);price.disabled=locked;price.setAttribute('aria-label','Preço unitário em reais');
+      const price=prepareBRLField(createCell('input'));price.value=item.unitCents===null?'':money(item.unitCents);price.disabled=locked;price.setAttribute('aria-label','Preço unitário em reais');
       const sub=createCell('strong','—','shopping-item-subtotal');
       function recalc(){const cents=item.unitCents===null?null:Math.round(item.qty*item.unitCents);sub.textContent=cents===null||!Number.isFinite(cents)?'—':money(cents);shoppingChanged();}
       qty.addEventListener('input',()=>{item.qty=Number(qty.value);recalc();});
-      price.addEventListener('input',()=>{item.unitCents=price.value.trim()===''?null:Math.round(Number(price.value)*100);recalc();});
+      price.addEventListener('input',()=>{const cents=parseBRLCents(price.value);item.unitCents=Number.isSafeInteger(cents)&&cents>=0?cents:null;if(cents!==null&&!Number.isSafeInteger(cents))price.classList.add('money-invalid');recalc();});
       sub.textContent=item.unitCents===null?'—':money(Math.round(item.qty*item.unitCents));
       const remove=createCell('button','×','shopping-remove');remove.type='button';remove.title='Remover produto';remove.setAttribute('aria-label',`Remover ${item.name||'produto'}`);remove.disabled=locked;
       remove.addEventListener('click',()=>{list.items=list.items.filter(i=>i.id!==item.id);shoppingRenderItems();shoppingChanged();});
@@ -702,6 +728,6 @@
   $('#payer').add(new Option('Ambos','Ambos'));
   $('#payment').prepend(new Option('Selecione...',''));$('#payment').required=true;
   const viewAllButton=createCell('button','Ver todos →','view-all-button');viewAllButton.id='viewAllEntries';viewAllButton.type='button';$('.record-tools').append(viewAllButton);
-  setupNavMotion();attach();updateLoginOptions();updateMotionControl();setKind('Saída');$('#dueDate').value=nowISO();render();
+  prepareBRLField($('#amount'));setupNavMotion();attach();updateLoginOptions();updateMotionControl();setKind('Saída');$('#dueDate').value=nowISO();render();
   if(!CONFIG.GOOGLE_CLIENT_ID||CONFIG.GOOGLE_CLIENT_ID.startsWith('CONFIGURAR_')){$('#loginHint').textContent='Aguardando configuração do login Google para ativar o site.';$('#loginButton').disabled=true;}
 })();
