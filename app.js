@@ -296,6 +296,34 @@
     openModal('Entrada');
     $('#category').value=INCOME_CATEGORIES.includes(category)?category:'Outras entradas';
   }
+  const FOOD_WEEK_LIMIT=25000,FOOD_MONTH_LIMIT=100000;
+  function foodBudgetSnapshot(records,today=nowISO()){
+    const date=new Date(`${today}T12:00:00`);
+    const monday=new Date(date);monday.setDate(date.getDate()-((date.getDay()+6)%7));
+    const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+    const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const weekStart=localDate(monday),weekEnd=localDate(sunday),period=today.slice(0,7);
+    const paid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&['Mercado','Alimentação'].includes(e.category)&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
+    const weekSpent=paid.filter(e=>e.due>=weekStart&&e.due<=weekEnd).reduce((sum,e)=>sum+e.cents,0);
+    const monthSpent=paid.filter(e=>e.due.startsWith(period)).reduce((sum,e)=>sum+e.cents,0);
+    return {period,weekStart,weekEnd,weekSpent,monthSpent};
+  }
+  function renderFoodBudget(){
+    const budget=foodBudgetSnapshot(entries);
+    $('#foodBudgetPeriod').textContent=monthLabel(budget.period);
+    const shortDate=iso=>new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    $('#foodWeekDates').textContent=`${shortDate(budget.weekStart)} a ${shortDate(budget.weekEnd)}`;
+    for(const [prefix,spent,limit] of [['Week',budget.weekSpent,FOOD_WEEK_LIMIT],['Month',budget.monthSpent,FOOD_MONTH_LIMIT]]){
+      $(`#food${prefix}Spent`).textContent=money(spent);
+      const remaining=limit-spent,label=$(`#food${prefix}Remaining`),bar=$(`#food${prefix}Bar`);
+      label.textContent=remaining>=0?`${money(remaining)} ainda disponíveis`:`${money(-remaining)} acima do limite`;
+      label.classList.toggle('over-budget',remaining<0);
+      bar.classList.toggle('over-budget',remaining<0);
+      bar.setAttribute('aria-valuenow',String(Math.min(limit,spent)/100));
+      bar.setAttribute('aria-valuetext',`${money(spent)} gastos de ${money(limit)}`);
+      $(`#food${prefix}Fill`).style.width=`${Math.min(100,spent/limit*100)}%`;
+    }
+  }
   const cloneShopping = list => ({...list,items:list.items.map(item=>({...item}))});
   const blankShoppingItem = () => ({id:makeId(),name:'',qty:1,unitCents:null,bought:false});
   function shoppingTotals(list){
@@ -755,7 +783,7 @@
     document.querySelectorAll('#entryFilters [data-filter]').forEach(button=>button.classList.toggle('active',button.dataset.filter===entryFilter));
     if(page==='installments')renderInstallments();
     if(page==='recurring')renderRecurring();
-    if(page==='shopping')renderShopping();
+    if(page==='shopping'){renderFoodBudget();renderShopping();}
     const personal=current.filter(e=>e.type==='Saída'&&e.scope==='Pessoal');
     $('#personalCrispimTotal').textContent=money(personal.filter(e=>e.person==='Crispim').reduce((sum,e)=>sum+e.cents,0));
     $('#personalYashaTotal').textContent=money(personal.filter(e=>e.person==='Yasha').reduce((sum,e)=>sum+e.cents,0));
