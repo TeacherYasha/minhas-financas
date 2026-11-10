@@ -392,3 +392,38 @@ body.motion-disabled .route-curtain{display:none!important}
 
 /* Avisos de login, atualização e salvamento: centralizados no topo. */
 .toast{left:50%;right:auto;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;min-width:min(260px,calc(100vw - 28px));max-width:min(450px,calc(100vw - 28px));text-align:center;line-height:1.55;overflow-wrap:anywhere;border-radius:13px;box-shadow:0 15px 40px #0008}
+
+/* Menu lateral enxuto: quatro seções, cada uma com subitens expansíveis. */
+.sidebar{width:250px;padding:23px 15px 18px;background:linear-gradient(180deg,#111d27,#101923);border-right-color:#2c3c43}
+.side-brand{margin-bottom:35px}
+.menu-caption{font-size:9px;letter-spacing:1.5px;color:#708c92;margin-bottom:13px}
+#nav{gap:6px}
+#nav .nav-link{width:100%;min-height:44px;padding:11px 13px;display:flex;align-items:center;gap:11px;border-radius:12px;font-size:14px;text-align:left}
+#nav .nav-label{flex:1;font-size:12px;font-weight:750;white-space:nowrap}
+#nav .nav-icon{width:21px;flex:0 0 21px;font-size:18px;text-align:center;color:#88b7a7}
+#nav .nav-chevron{font-size:17px;color:#719187;transition:transform .35s cubic-bezier(.2,.8,.2,1);margin-left:auto}
+#nav .nav-group{min-width:0}
+#nav .nav-group.current>.nav-parent{color:#d2f4df}
+#nav .nav-group.current>.nav-parent .nav-icon{color:#a8efbf}
+#nav .nav-group.open .nav-chevron{transform:rotate(180deg)}
+#nav .nav-submenu{display:grid;gap:3px;max-height:0;opacity:0;overflow:hidden;visibility:hidden;pointer-events:none;padding-left:14px;transition:max-height .42s cubic-bezier(.2,.8,.2,1),opacity .27s ease,visibility .27s ease}
+#nav .nav-group.open .nav-submenu{max-height:230px;opacity:1;visibility:visible;pointer-events:auto;padding-top:5px;padding-bottom:5px}
+#nav .nav-sub-link{min-height:39px;gap:9px;padding:9px 10px;color:#94aeb4;border-radius:10px}
+#nav .nav-sub-link>span:last-child{font-size:12px;font-weight:650}
+#nav .nav-sub-dot{width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:#5b7b75}
+#nav .nav-sub-link.active{color:#d9f9df}
+#nav .nav-sub-link.active .nav-sub-dot{background:#c4ec88;box-shadow:0 0 0 4px #c4ec881d}
+.nav-active-rail{left:var(--nav-rail-x,0px);width:calc(100% - var(--nav-rail-x,0px));transition:left .3s ease,width .3s ease}
+.side-bottom{padding-top:23px}
+@media(max-width:760px){.sidebar{width:250px;left:-270px}}
+
+/* Cadastro e histórico de compras são áreas realmente distintas. */
+#shoppingPanel.shopping-new-view .shopping-layout{grid-template-columns:minmax(0,1fr)}
+#shoppingPanel.shopping-new-view .shopping-list-rail{display:none}
+#shoppingPanel.shopping-history-view:not(.shopping-history-show-detail) .shopping-layout{grid-template-columns:minmax(0,1fr)}
+#shoppingPanel.shopping-history-view:not(.shopping-history-show-detail) .shopping-editor{display:none}
+#shoppingPanel.shopping-history-view .shopping-list-rail{min-height:220px}
+#shoppingPanel.shopping-history-view:not(.shopping-history-show-detail) .shopping-list-cards{grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px}
+#entriesPanel.accounts-only .feature-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+#entriesPanel.accounts-only .feature-stats article:first-child{display:none}
+@media(max-width:590px){#entriesPanel.accounts-only .feature-stats{grid-template-columns:1fr 1fr}}
