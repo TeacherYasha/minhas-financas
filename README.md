@@ -54,7 +54,7 @@ O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com 
 
 ## Áreas do site
 
-- **Visão geral:** saldo, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
+- **Visão geral:** saldo inicial transportado dos meses anteriores, resultado do mês, saldo previsto para o próximo mês, saldo real efetivado, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
 - **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
 - **Salários e entradas:** área exclusiva para receitas, com totais de salários, rendas extras, valores já recebidos e pendentes; divisão por categoria e por quem recebeu (Crispim, Yasha ou Ambos); filtros e botões para registrar salário ou outra entrada. Esses valores são os mesmos lançamentos da aba `Lancamentos` da planilha, sem criar cópias.
 - **Registrar compras:** cadastro de compras já realizadas, detalhamento de produtos, quantidades, preços pagos, seleção dos itens adquiridos, total automático e lançamento agrupado de uma única despesa.
@@ -63,6 +63,12 @@ O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com 
 - **Gastos pessoais:** despesas individuais de Crispim e Yasha, com filtros e totais separados.
 
 Os controles das páginas continuam usando a mesma Planilha Google privada. A aba extra `ListasCompras` armazena exclusivamente o detalhamento dos produtos de cada compra; a aba `Lancamentos` permanece como fonte das despesas e receitas, sem repetir cada produto como uma despesa individual.
+
+### Saldo transportado entre meses
+
+O saldo inicial de um mês corresponde às **entradas menos as saídas de todos os meses anteriores**. O resultado previsto do mês é a diferença entre as entradas e despesas cadastradas naquele mês. A soma dos dois valores é o saldo previsto que seguirá para o mês seguinte. Por exemplo, R$ 2.000,00 em entradas menos R$ 1.500,00 em despesas de agosto geram R$ 500,00 de saldo inicial em setembro.
+
+O transporte é um **cálculo automático**, não uma nova receita: nenhum salário ou gasto é copiado para a planilha, impedindo dupla contagem. Os saldos inicial e final são previsões que incluem lançamentos pendentes. O cartão **Saldo real acumulado** mostra apenas recebimentos marcados como *Recebido* e despesas marcadas como *Pago* até o mês escolhido. Como a planilha registra vencimento, mas não uma data separada de liquidação, pagamentos e recebimentos feitos com atraso ainda pertencem ao mês indicado no campo de data/vencimento.
 
 ## Experiência visual
 
