@@ -46,7 +46,7 @@
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
-  let incomeView='all';
+  let incomeView='all',shoppingView='overview',navSelection='overview';
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -310,23 +310,28 @@
     updateShoppingTotals();
   }
   function shoppingNewList(){
-    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return;
+    if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return false;
     shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
     shoppingDirty=true;shoppingRevision++;
-    renderShopping();$('#shoppingTitle').focus();$('#shoppingTitle').select();
+    shoppingView='new';renderShopping();
+    if(page==='shopping'){navigateTo('shopping','shopping-new');$('#shoppingTitle').focus();$('#shoppingTitle').select();}
+    return true;
   }
   function shoppingSelect(id){
     if(shoppingDraft?.id===id)return;
     if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return;
     const found=shoppingLists.find(list=>list.id===id);if(!found)return;
-    shoppingDraft=cloneShopping(found);shoppingDirty=false;renderShopping();
+    shoppingDraft=cloneShopping(found);shoppingDirty=false;shoppingView='history';renderShopping();
+    if(page==='shopping')navigateTo('shopping','shopping-history');
   }
   function shoppingDuplicate(){
     if(!shoppingDraft)return;
     if(shoppingDirty&&!confirm('Reutilizar os produtos? As alterações não salvas da compra atual serão descartadas.'))return;
     shoppingDraft={...cloneShopping(shoppingDraft),id:makeId(),row:null,title:`${shoppingDraft.title.replace(/\s*\(cópia\)$/i,'').slice(0,89)} (cópia)`,date:nowISO(),status:'Planejada',expenseId:'',createdBy:profile?.email||'',updated:'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),items:shoppingDraft.items.filter(item=>item.name.trim()).map(item=>({...item,id:makeId(),bought:false}))};
     if(!shoppingDraft.items.length)shoppingDraft.items.push(blankShoppingItem());
-    shoppingDirty=true;shoppingRevision++;renderShopping();toast('Novo registro criado com os produtos da compra anterior. Confira os valores e salve.');
+    shoppingDirty=true;shoppingRevision++;shoppingView='new';renderShopping();
+    if(page==='shopping')navigateTo('shopping','shopping-new');
+    toast('Novo registro criado com os produtos da compra anterior. Confira os valores e salve.');
   }
   function shoppingRow(list){return [list.id,list.title,list.date,list.status,JSON.stringify(list.items),list.expenseId||'',list.updated||new Date().toISOString(),list.createdBy||profile.email,list.payer||'',list.payment||'',list.purchasedDate||''];}
   function validateShopping(list){
@@ -467,7 +472,9 @@
       await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})});
       shoppingDraft=cloneShopping(finished);shoppingDirty=false;
       const idx=shoppingLists.findIndex(l=>l.id===list.id);if(idx>=0)shoppingLists[idx]=cloneShopping(finished);
-      await loadRows();renderShopping();toast(`Compra registrada! ${money(actual)} lançado em uma única despesa.`);
+      await loadRows();shoppingView='history';renderShopping();
+      if(page==='shopping')navigateTo('shopping','shopping-history');
+      toast(`Compra registrada! ${money(actual)} lançado em uma única despesa.`);
     }catch(error){toast(error.message||'Não foi possível finalizar a compra.',true);}
     finally{shoppingSaving=false;if(shoppingDraft)renderShopping();}
   }
@@ -547,8 +554,7 @@
     clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;
     $('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');
     $('#routeCurtain').className='route-curtain';
-    document.querySelectorAll('.nav-link').forEach(link=>link.classList.toggle('active',link.dataset.page===page));
-    syncNavIndicator();
+    syncNavMenu();
     updateMotionControl();
     toast(next==='on'?'Animações ativadas para este navegador. Experimente trocar de aba.':'Animações reduzidas neste navegador.');
   }
@@ -560,11 +566,27 @@
     overview:['◫','Visão geral'],entries:['≡','Lançamentos'],income:['↙','Salários e entradas'],shopping:['🛒','Registrar compras'],
     installments:['▦','Parcelamentos'],recurring:['◷','Contas fixas'],personal:['♡','Gastos pessoais']
   };
+  const routeNavKeys={overview:'overview',entries:'accounts',income:'income',shopping:'shopping',installments:'installments',recurring:'recurring',personal:'personal'};
+  const navKeyGroups={income:'income',salary:'income',extra:'income',accounts:'accounts',installments:'accounts',recurring:'accounts',personal:'accounts',shopping:'shopping','shopping-new':'shopping','shopping-history':'shopping'};
+  function openNavGroup(name){
+    document.querySelectorAll('#nav .nav-group').forEach(group=>{
+      const open=group.dataset.group===name;
+      group.classList.toggle('open',open);
+      group.querySelector('.nav-parent')?.setAttribute('aria-expanded',String(open));
+    });
+  }
+  function syncNavMenu(){
+    document.querySelectorAll('#nav [data-nav-key]').forEach(button=>button.classList.toggle('active',button.dataset.navKey===navSelection));
+    document.querySelectorAll('#nav .nav-group').forEach(group=>group.classList.toggle('current',group.dataset.group===navKeyGroups[navSelection]));
+    syncNavIndicator();
+    requestAnimationFrame(()=>syncNavIndicator());
+  }
   function syncNavIndicator(immediate=false){
     const nav=$('#nav'),active=nav.querySelector('.nav-link.active');
     if(!active||!active.offsetHeight)return;
     if(immediate)nav.classList.remove('nav-motion-ready');
     const [surface,accent]=navTheme[active.dataset.page]||navTheme.overview;
+    nav.style.setProperty('--nav-rail-x',active.classList.contains('nav-sub-link')?'14px':'0px');
     nav.style.setProperty('--nav-rail-y',`${active.offsetTop}px`);
     nav.style.setProperty('--nav-rail-height',`${active.offsetHeight}px`);
     nav.style.setProperty('--nav-rail-color',surface);
@@ -609,11 +631,11 @@
       el.addEventListener('animationend',onEnd);
     });
   }
-  function navigateTo(next){
-    const links=[...document.querySelectorAll('.nav-link')];
-    if(!links.some(link=>link.dataset.page===next))return;
-    links.forEach(link=>link.classList.toggle('active',link.dataset.page===next));
-    syncNavIndicator();
+  function navigateTo(next,navKey=null){
+    if(!routeLabels[next])return;
+    navSelection=navKey||routeNavKeys[next];
+    openNavGroup(navKeyGroups[navSelection]||null);
+    syncNavMenu();
     $('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');
     const content=$('.main-content'),curtain=$('#routeCurtain');
     const activeCurtain=curtain.classList.contains('is-active');
@@ -642,6 +664,8 @@
     if(page===next){
       curtain.className='route-curtain';
       content.classList.remove('page-leaving','page-pre-enter','page-entering');
+      render();
+      requestAnimationFrame(()=>revealPageDetails(next));
       return;
     }
     if(reducedMotion()){
@@ -681,12 +705,19 @@
     const subtitles={overview:'Uma prévia das movimentações mais recentes',entries:'Pesquise, filtre e gerencie todas as movimentações',income:incomeView==='all'?'Consulte salários e outras entradas cadastrados em qualquer mês':'Somente recebimentos do mês escolhido',shopping:'Produtos e valores de compras já realizadas',installments:'Controle de parcelas',recurring:'Vencimentos das contas fixas',personal:'Seus cuidados individuais'};
     const headings={overview:'Bem-vindo às suas finanças ✦',entries:'Tudo o que entra e sai ↗',income:'Nossas conquistas e receitas ✨',shopping:'Sua compra detalhada 🛒',installments:'Compras sem surpresas ◷',recurring:'As contas da casa em dia ✓',personal:'Um espaço para cada um ♡'};
     const descriptions={overview:'Uma visão clara de tudo que acontece com o dinheiro da casa.',entries:'Seu histórico de receitas e despesas em um só lugar.',income:'Acompanhe os salários e outras entradas que vocês já receberam.',shopping:'Informe os produtos adquiridos e registre o total pago em uma única despesa.',installments:'Veja o progresso de cada compra e as próximas parcelas.',recurring:'Acompanhe o que vence e confirme os pagamentos do mês.',personal:'Autocuidado e despesas individuais, com tudo organizado por pessoa.'};
+    if(page==='entries'&&navSelection==='accounts'&&entryFilter==='Saída'){headings.entries='Contas e despesas ✦';descriptions.entries='Todas as despesas da casa em um só lugar.';crumbs.entries='Contas';}
+    if(page==='income'&&navSelection==='salary'){headings.income='Salários recebidos ✦';descriptions.income='Consulte seus salários e os da Yasha por período.';titles.income='Histórico de salários';crumbs.income='Salários';}
+    if(page==='income'&&navSelection==='extra'){headings.income='Rendas extras ✦';descriptions.income='Acompanhe os recebimentos além dos salários.';titles.income='Histórico de renda extra';crumbs.income='Renda extra';}
+    if(page==='shopping'&&shoppingView==='new'){headings.shopping='Nova compra 🛒';descriptions.shopping='Registre os produtos adquiridos, com quantidades e preços pagos.';crumbs.shopping='Nova compra';}
+    if(page==='shopping'&&shoppingView==='history'){headings.shopping='Histórico de compras ✦';descriptions.shopping='Consulte compras anteriores e os produtos de cada registro.';crumbs.shopping='Histórico de compras';}
     $('#recordsTitle').textContent=titles[page];$('#crumb').textContent=crumbs[page];
     $('#recordsSubtitle').textContent=subtitles[page];
     $('#pageTitle').textContent=headings[page];
     $('#pageSubtitle').textContent=descriptions[page];
     document.querySelector('.headline .overline').textContent={overview:'SEU PAINEL FINANCEIRO',entries:'HISTÓRICO FINANCEIRO',income:'RECEITAS DA FAMÍLIA',shopping:'CADASTRO DE COMPRAS REALIZADAS',installments:'PLANEJAMENTO DE COMPRAS',recurring:'ORGANIZAÇÃO DA CASA',personal:'ESPAÇO INDIVIDUAL'}[page];
     $('#newEntry').textContent=page==='income'?'＋ Nova receita':'＋ Novo lançamento';
+    $('#incomeAddSalary').textContent=navSelection==='extra'?'＋ Registrar renda extra':'＋ Registrar salário';
+    $('#incomeAddExtra').classList.toggle('hidden',navSelection==='salary');
     $('#emptyAdd').textContent=page==='income'?'＋ Registrar receita':'＋ Adicionar lançamento';
     $('#payerColumnTitle').textContent=page==='income'?'QUEM RECEBEU':'QUEM PAGOU';
     $('#paymentColumnTitle').textContent=page==='income'?'FORMA DE RECEBIMENTO':'PAGAMENTO';
@@ -696,12 +727,16 @@
     $('.carryover-flow').classList.toggle('hidden',page!=='overview');
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
     $('#shoppingPanel').classList.toggle('hidden',page!=='shopping');
+    $('#shoppingPanel').classList.toggle('shopping-new-view',shoppingView==='new');
+    $('#shoppingPanel').classList.toggle('shopping-history-view',shoppingView==='history');
+    $('#shoppingPanel').classList.toggle('shopping-history-show-detail',shoppingView==='history'&&Boolean(shoppingDraft?.row));
     $('.period-bar').classList.toggle('hidden',page==='shopping');
     $('#newEntry').classList.toggle('hidden',page==='shopping');
     document.querySelector('.kpis').classList.toggle('hidden',page!=='overview');
     document.querySelector('.insights').classList.toggle('hidden',page!=='overview');
     $('.records').classList.toggle('hidden',page==='installments'||page==='recurring'||page==='shopping');
     $('#entriesPanel').classList.toggle('hidden',page!=='entries');
+    $('#entriesPanel').classList.toggle('accounts-only',page==='entries'&&entryFilter==='Saída');
     $('#installmentsPanel').classList.toggle('hidden',page!=='installments');
     $('#recurringPanel').classList.toggle('hidden',page!=='recurring');
     $('#entriesIncome').textContent=money(income);$('#entriesExpense').textContent=money(expense);$('#entriesCount').textContent=String(current.length);
@@ -744,18 +779,40 @@
       tr.append(nameTd,catTd,payerTd,paymentTd,dateTd,amountTd,statusTd,actions);tbody.append(tr);
     }
   }
-  function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#emptyAdd').addEventListener('click',()=>page==='income'?newIncome():openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
-    $('#incomeAddSalary').addEventListener('click',()=>newIncome('Salário'));
+  function attach(){$('#loginButton').addEventListener('click',()=>login());$('#switchAccountButton').addEventListener('click',()=>login(true));$('#logout').addEventListener('click',logout);$('#newEntry').addEventListener('click',()=>page==='income'?newIncome(navSelection==='extra'?'Renda extra':'Salário'):openModal());$('#emptyAdd').addEventListener('click',()=>page==='income'?newIncome(navSelection==='extra'?'Renda extra':'Salário'):openModal());$('#newExpense').addEventListener('click',()=>openModal('Saída'));$('#newIncome').addEventListener('click',()=>openModal('Entrada'));
+    $('#incomeAddSalary').addEventListener('click',()=>newIncome(navSelection==='extra'?'Renda extra':'Salário'));
     $('#incomeAddExtra').addEventListener('click',()=>newIncome('Renda extra'));
     $('#incomeAllView').addEventListener('click',()=>{incomeView='all';render();});
     $('#incomeMonthlyView').addEventListener('click',()=>{incomeView='month';render();});
-    $('#incomeCategoryFilter').addEventListener('change',render);
+    $('#incomeCategoryFilter').addEventListener('change',()=>{
+      navSelection=$('#incomeCategoryFilter').value==='Salário'?'salary':$('#incomeCategoryFilter').value==='Renda extra'?'extra':'income';
+      openNavGroup('income');syncNavMenu();render();
+    });
     $('#incomeRecipientFilter').addEventListener('change',render);
     $('#addInstallment').addEventListener('click',newInstallment);$('#addRecurring').addEventListener('click',newRecurring);
     $('#entryFilters').addEventListener('click',event=>{const button=event.target.closest('[data-filter]');if(!button)return;entryFilter=button.dataset.filter;render();});
-    $('#viewAllEntries').addEventListener('click',()=>navigateTo('entries'));
+    $('#viewAllEntries').addEventListener('click',()=>{entryFilter='all';navigateTo('entries','accounts');});
     $('#prevMonth').addEventListener('click',()=>{month=monthShift(month,-1);render();});$('#nextMonth').addEventListener('click',()=>{month=monthShift(month,1);render();});$('#currentMonth').addEventListener('click',()=>{month=currentMonth();render();});$('#refresh').addEventListener('click',async()=>{try{await loadRows(true);if(page==='shopping')await loadShoppingLists();}catch(e){toast(e.message,true)}});
-    $('#search').addEventListener('input',render);$('#nav').addEventListener('click',event=>{const b=event.target.closest('[data-page]');if(!b)return;navClickRipple(b,event);navigateTo(b.dataset.page);});
+    $('#search').addEventListener('input',render);
+    $('#nav').addEventListener('click',event=>{
+      const b=event.target.closest('button[data-page]');if(!b)return;
+      navClickRipple(b,event);
+      const key=b.dataset.navKey,next=b.dataset.page,group=b.dataset.groupToggle;
+      if(group&&navSelection===key&&b.closest('.nav-group').classList.contains('open')){
+        openNavGroup(null);syncNavMenu();return;
+      }
+      if(key==='shopping-new'){
+        if(!shoppingNewList())return;
+        if(page!=='shopping')navigateTo('shopping','shopping-new');
+        return;
+      }
+      if(key==='shopping-history')shoppingView='history';
+      if(key==='shopping')shoppingView='overview';
+      if(next==='income')$('#incomeCategoryFilter').value=b.dataset.incomeCategory||'todas';
+      if(key==='accounts')entryFilter='Saída';
+      navigateTo(next,key);
+    });
+    $('.side-brand').addEventListener('click',event=>{event.preventDefault();navigateTo('overview');});
     $('#motionToggle').addEventListener('click',toggleMotion);
     $('#menuToggle').addEventListener('click',()=>{$('#sidebar').classList.add('open');$('#mobileBackdrop').classList.remove('hidden');});$('#mobileBackdrop').addEventListener('click',()=>{$('#sidebar').classList.remove('open');$('#mobileBackdrop').classList.add('hidden');});
     $('#closeModal').addEventListener('click',closeModal);$('#cancelModal').addEventListener('click',closeModal);$('#modalBackdrop').addEventListener('click',event=>{if(event.target===$('#modalBackdrop'))closeModal();});document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
