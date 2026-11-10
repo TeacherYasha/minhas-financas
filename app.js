@@ -231,6 +231,19 @@
     }
     return {items,total,salaries,other:total-salaries,received,pending:total-received,categories,recipients};
   }
+  function calculateMonthlyBalances(records,period){
+    let opening=0,movement=0,realized=0;
+    for(const record of records){
+      const recordMonth=String(record.due||'').slice(0,7);
+      if(!/^\d{4}-\d{2}$/.test(recordMonth)||!Number.isSafeInteger(record.cents)||!['Entrada','Saída'].includes(record.type))continue;
+      const signedValue=record.type==='Entrada'?record.cents:-record.cents;
+      if(recordMonth<period)opening+=signedValue;
+      else if(recordMonth===period)movement+=signedValue;
+      const settled=record.type==='Entrada'?record.status==='Recebido':record.status==='Pago';
+      if(settled&&recordMonth<=period)realized+=signedValue;
+    }
+    return {opening,movement,closing:opening+movement,realized};
+  }
   function renderIncome(snapshot){
     $('#incomeMonthTotal').textContent=money(snapshot.total);
     $('#incomeSalariesTotal').textContent=money(snapshot.salaries);
@@ -551,7 +564,7 @@
     if(reducedMotion())return;
     document.querySelectorAll('.page-reveal').forEach(el=>el.classList.remove('page-reveal'));
     const groups={
-      overview:'.kpis .kpi, .insights .panel, .records',
+      overview:'.carryover-flow .carryover-step, .kpis .kpi, .insights .panel, .records',
       entries:'#entriesPanel .feature-stats article, #entriesPanel .filter-bar, .records',
       income:'#incomePanel .income-highlights article, #incomePanel .income-detail-card, .records',
       shopping:'#shoppingPanel .shopping-stats article, #shoppingPanel .shopping-list-rail, #shoppingPanel .shopping-editor',
@@ -629,9 +642,12 @@
   function render(){
     $('#monthLabel').textContent=monthLabel(month);$('#summaryMonth').textContent=monthLabel(month);
     const current=entries.filter(e=>e.due.startsWith(month));const income=current.filter(e=>e.type==='Entrada').reduce((a,e)=>a+e.cents,0);const expense=current.filter(e=>e.type==='Saída').reduce((a,e)=>a+e.cents,0);
-    const paid=entries.filter(e=>e.type==='Saída'&&e.status==='Pago').reduce((a,e)=>a+e.cents,0),received=entries.filter(e=>e.type==='Entrada'&&e.status==='Recebido').reduce((a,e)=>a+e.cents,0);
+    const balances=calculateMonthlyBalances(entries,month);
     const pending=current.filter(e=>e.type==='Saída'&&e.status==='Pendente').reduce((a,e)=>a+e.cents,0);
-    $('#realBalance').textContent=money(received-paid);$('#incomeTotal').textContent=money(income);$('#expenseTotal').textContent=money(expense);$('#pendingTotal').textContent=money(pending);$('#forecast').textContent=money(income-expense);$('#forecast').className=income-expense<0?'negative':'positive';$('#incomeBar').style.width=`${income+expense?income/(income+expense)*100:50}%`;
+    for(const [id,value] of [['openingBalance',balances.opening],['monthlyMovement',balances.movement],['closingBalance',balances.closing]]){
+      const el=$(`#${id}`);el.textContent=money(value);el.classList.toggle('negative',value<0);el.classList.toggle('positive',value>=0);
+    }
+    $('#realBalance').textContent=money(balances.realized);$('#incomeTotal').textContent=money(income);$('#expenseTotal').textContent=money(expense);$('#pendingTotal').textContent=money(pending);$('#forecast').textContent=money(income-expense);$('#forecast').className=income-expense<0?'negative':'positive';$('#incomeBar').style.width=`${income+expense?income/(income+expense)*100:50}%`;
     const groups=new Map();for(const e of current.filter(e=>e.type==='Saída'))groups.set(e.category,(groups.get(e.category)||0)+e.cents);const sorted=[...groups.entries()].sort((a,b)=>b[1]-a[1]);$('#categoryCount').textContent=`${groups.size} categorias`;$('#chartTotal').textContent=money(expense);
     if(expense){let start=0;const stops=[];for(let i=0;i<sorted.length;i++){const size=sorted[i][1]/expense*100;stops.push(`${COLORS[i%COLORS.length]} ${start.toFixed(4)}% ${(start+size).toFixed(4)}%`);start+=size;}$('#donut').style.background=`conic-gradient(${stops.join(',')})`;}else $('#donut').style.background='#2b4038';
     const legend=$('#categoryLegend');legend.replaceChildren();if(!sorted.length)legend.append(createCell('p','Adicione suas primeiras despesas para visualizar o gráfico.','empty-legend'));else sorted.slice(0,7).forEach(([cat,val],i)=>{const share=val/expense*100;const percentage=share<1?`${share.toLocaleString('pt-BR',{maximumFractionDigits:1})}%`:`${Math.round(share)}%`;const div=createCell('div',null,'legend-item'),dot=createCell('i'),label=createCell('span',cat),percent=createCell('b',percentage);dot.style.background=COLORS[i%COLORS.length];div.append(dot,label,percent);legend.append(div);});
@@ -652,6 +668,7 @@
     $('#emptyRecordsTitle').textContent=page==='income'?'Nenhuma receita encontrada':'Nenhum lançamento neste mês';
     $('#emptyRecordsDetail').textContent=page==='income'?'Registre um salário ou outra entrada, ou ajuste os filtros.':'Comece adicionando uma receita ou despesa.';
     $('#incomePanel').classList.toggle('hidden',page!=='income');
+    $('.carryover-flow').classList.toggle('hidden',page!=='overview');
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
     $('#shoppingPanel').classList.toggle('hidden',page!=='shopping');
     $('.period-bar').classList.toggle('hidden',page==='shopping');
