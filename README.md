@@ -54,6 +54,7 @@ O usuário pode cadastrar uma compra do mercado, informar até 100 produtos com 
 
 - **Visão geral:** saldo, entradas, saídas, gráfico de categorias e prévia de até seis lançamentos.
 - **Lançamentos:** extrato completo do mês, pesquisa, filtros de receitas/despesas e edição dos registros.
+- **Salários e entradas:** área exclusiva para receitas, com totais de salários, rendas extras, valores já recebidos e pendentes; divisão por categoria e por quem recebeu (Crispim, Yasha ou Ambos); filtros e botões para registrar salário ou outra entrada. Esses valores são os mesmos lançamentos da aba `Lancamentos` da planilha, sem criar cópias.
 - **Registrar compras:** cadastro de compras já realizadas, detalhamento de produtos, quantidades, preços pagos, seleção dos itens adquiridos, total automático e lançamento agrupado de uma única despesa.
 - **Parcelamentos:** compras agrupadas, total, saldo pendente, barra de progresso, próximos vencimentos e controle individual de cada parcela.
 - **Contas fixas:** lista de vencimentos recorrentes e contas já classificadas como aluguel, energia, água, internet ou contas do mês, com totais e confirmação de pagamento por conta. Exibir uma conta nessa área não a transforma automaticamente em recorrente.
