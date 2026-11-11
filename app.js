@@ -452,6 +452,14 @@
     if(!list.items.length)container.append(createCell('p','Nenhum produto informado. Adicione um item desta compra.','shopping-no-items'));
     updateShoppingTotals();
   }
+  function shoppingNumpadEnter(event){
+    if(event.code!=='NumpadEnter'||event.key!=='Enter'||event.repeat||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+    if(page!=='shopping'||shoppingView!=='new'||!shoppingDraft||shoppingDraft.status==='Finalizada'||shoppingSaving)return;
+    // Só durante a edição da compra; selects e botões mantêm a ação habitual do Enter.
+    if(!event.target?.closest?.('#shoppingWorkspace')||event.target.closest('button,select,a,textarea,[contenteditable="true"]'))return;
+    event.preventDefault();
+    $('#shoppingAddItem').click();
+  }
   function renderShopping(){
     $('#shoppingOpenCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').length);
     $('#shoppingPendingCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').reduce((sum,l)=>sum+l.items.filter(i=>i.name.trim()).length,0));
@@ -859,6 +867,7 @@
     $('#shoppingNew').addEventListener('click',shoppingNewList);$('#shoppingEmptyCreate').addEventListener('click',shoppingNewList);
     $('#shoppingDuplicate').addEventListener('click',shoppingDuplicate);
     $('#shoppingAddItem').addEventListener('click',()=>{if(!shoppingDraft||shoppingDraft.status==='Finalizada')return;if(shoppingDraft.items.length>=100){toast('Máximo de 100 itens por lista.',true);return;}shoppingDraft.items.push(blankShoppingItem());shoppingRenderItems();shoppingChanged();const inputs=$('#shoppingItems').querySelectorAll('input[aria-label="Nome do produto"]');inputs[inputs.length-1]?.focus();});
+    document.addEventListener('keydown',shoppingNumpadEnter);
     for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).addEventListener('change',()=>{if(shoppingDraft&&shoppingDraft.status!=='Finalizada'){shoppingDraft[id==='shoppingTitle'?'title':id==='shoppingDate'?'date':id==='shoppingPayer'?'payer':id==='shoppingPayment'?'payment':'purchasedDate']=$(`#${id}`).value;shoppingChanged();}});
     $('#shoppingTitle').addEventListener('input',()=>{if(shoppingDraft&&shoppingDraft.status!=='Finalizada'){shoppingDraft.title=$('#shoppingTitle').value;shoppingChanged();}});
     $('#shoppingSave').addEventListener('click',()=>shoppingSave().catch(()=>{}));
