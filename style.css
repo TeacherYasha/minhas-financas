@@ -205,7 +205,7 @@ body.motion-disabled *,body.motion-disabled *::before,body.motion-disabled *::af
 .shopping-no-items{font-size:12px;color:#acc1c9;text-align:center;padding:26px 0}
 .shopping-add-item{margin-top:13px;padding:12px 15px;border:1px dashed #6da68b;background:#23403860;border-radius:11px;color:#b8f5b9;font-weight:800;font-size:12px;width:100%}
 .shopping-add-item:hover{background:#2f5749}
-.shopping-totals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.shopping-totals{display:grid;grid-template-columns:1fr;gap:12px;margin-top:22px}
 .shopping-totals>div{display:grid;gap:8px;background:#203541;border:1px solid #385363;border-radius:13px;padding:17px}
 .shopping-totals>div.shopping-real-total{background:linear-gradient(125deg,#295a48,#213d3b);border-color:#508a64}
 .shopping-totals small{font-size:9px;color:#b6c8cd;letter-spacing:.7px;font-weight:800}
@@ -356,6 +356,18 @@ body.motion-disabled .route-curtain{display:none!important}
 @media(min-width:591px){.shopping-items-head,.shopping-item{grid-template-columns:68px minmax(125px,1fr) 70px 130px 92px 27px}}
 @media(min-width:591px) and (max-width:1240px){.shopping-items-head,.shopping-item{grid-template-columns:62px minmax(115px,1fr) 66px 120px 86px 27px}}
 @media(max-width:590px){.shopping-item{grid-template-columns:39px minmax(0,1fr) minmax(105px,.7fr) 30px}}
+
+/* A compra já foi realizada: não há etapa de marcar itens como adquiridos. */
+.shopping-items-head,.shopping-item{grid-template-columns:minmax(140px,1fr) 70px 130px 92px 30px}
+@media(max-width:1240px) and (min-width:591px){.shopping-items-head,.shopping-item{grid-template-columns:minmax(115px,1fr) 66px 120px 86px 30px}}
+@media(max-width:590px){
+  .shopping-item{grid-template-columns:minmax(0,1fr) minmax(105px,.7fr) 30px;gap:8px;padding:12px 3px}
+  .shopping-item>input[aria-label="Nome do produto"]{grid-row:1;grid-column:1/3}
+  .shopping-item>input[aria-label="Quantidade"]{grid-row:2;grid-column:1}
+  .shopping-item>input[aria-label="Preço unitário em reais"]{grid-row:2;grid-column:2}
+  .shopping-item-subtotal{grid-row:3;grid-column:1/3;text-align:right;padding-right:4px}
+  .shopping-remove{grid-row:1;grid-column:3}
+}
 
 /* Saldo transportado: o restante de um mês se torna a abertura do mês seguinte. */
 .carryover-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:20px}
