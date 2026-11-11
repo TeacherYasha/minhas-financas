@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261111-26" />
+  <link rel="stylesheet" href="style.css?v=20261111-27" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261111-26" defer></script>
+  <script src="app.js?v=20261111-27" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -128,8 +128,8 @@
                 <div class="shopping-items-table"><div class="shopping-items-head"><span>PRODUTO</span><span>QTD.</span><span>PREÇO PAGO/UN.</span><span>SUBTOTAL</span><span></span></div><div id="shoppingItems"></div></div>
                 <button type="button" id="shoppingAddItem" class="shopping-add-item">＋ Incluir produto comprado <span class="shopping-shortcut-hint">Atalho: Enter numérico ↵</span></button>
                 <div class="shopping-totals"><div class="shopping-real-total"><small>TOTAL PAGO NESTA COMPRA</small><strong id="shoppingActual">R$ 0,00</strong></div></div>
-                <div class="shopping-checkout"><h3>Registrar a despesa da compra</h3><p>Confirme quem pagou e a data da compra já realizada. Todos os produtos informados formarão uma única despesa.</p><div class="shopping-checkout-fields"><label>Quem pagou?<select id="shoppingPayer"><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option><option value="Ambos">Ambos</option></select></label><label>Forma de pagamento<select id="shoppingPayment"><option value="">Selecione...</option><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Cartão de débito</option><option value="Crédito">Cartão de crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option></select></label><label>Data da compra realizada<input id="shoppingPurchaseDate" type="date" /></label></div></div>
-                <div class="shopping-actions"><span id="shoppingSavedStatus">Nenhuma alteração pendente</span><div><button type="button" id="shoppingDuplicate" class="shopping-secondary">Reutilizar produtos em nova compra</button><button type="button" id="shoppingSave" class="shopping-secondary">Salvar produtos</button><button type="button" id="shoppingFinish" class="feature-action">✓ Registrar compra nas finanças</button></div></div>
+                <div class="shopping-checkout"><h3 id="shoppingCheckoutTitle">Registrar a despesa da compra</h3><p id="shoppingCheckoutHelp">Confirme quem pagou e a data da compra já realizada. Todos os produtos informados formarão uma única despesa.</p><div class="shopping-checkout-fields"><label>Quem pagou?<select id="shoppingPayer"><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option><option value="Ambos">Ambos</option></select></label><label>Forma de pagamento<select id="shoppingPayment"><option value="">Selecione...</option><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Cartão de débito</option><option value="Crédito">Cartão de crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option></select></label><label>Data da compra realizada<input id="shoppingPurchaseDate" type="date" /></label></div></div>
+                <div class="shopping-actions"><span id="shoppingSavedStatus">Nenhuma alteração pendente</span><div><button type="button" id="shoppingDuplicate" class="shopping-secondary">Reutilizar produtos em nova compra</button><button type="button" id="shoppingEdit" class="shopping-secondary shopping-edit-button hidden">✎ Editar compra registrada</button><button type="button" id="shoppingCancelEdit" class="shopping-secondary hidden">Cancelar edição</button><button type="button" id="shoppingSave" class="shopping-secondary">Salvar produtos</button><button type="button" id="shoppingFinish" class="feature-action">✓ Registrar compra nas finanças</button></div></div>
               </div>
             </div>
           </div>
