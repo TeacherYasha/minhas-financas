@@ -325,11 +325,14 @@
     }
   }
   const cloneShopping = list => ({...list,items:list.items.map(item=>({...item}))});
-  const blankShoppingItem = () => ({id:makeId(),name:'',qty:1,unitCents:null,bought:false});
+  const blankShoppingItem = () => ({id:makeId(),name:'',qty:1,unitCents:null,bought:true});
   function shoppingTotals(list){
-    const named=list.items.filter(item=>item.name.trim()),bought=named.filter(item=>item.bought);
+    const named=list.items.filter(item=>item.name.trim());
+    // Preserve a contabilidade das compras finalizadas antes da remoção da antiga marcação.
+    const bought=list.status==='Finalizada'&&named.some(item=>item.bought)?named.filter(item=>item.bought):named;
     const sub=item=>Math.round(item.qty*item.unitCents);
-    return {named,bought,estimated:named.reduce((sum,item)=>sum+(item.unitCents===null?0:sub(item)),0),actual:bought.reduce((sum,item)=>sum+(item.unitCents===null?0:sub(item)),0)};
+    const actual=bought.reduce((sum,item)=>sum+(item.unitCents===null?0:sub(item)),0);
+    return {named,bought,estimated:actual,actual};
   }
   function shoppingChanged(){
     shoppingDirty=true;shoppingRevision++;
@@ -365,7 +368,7 @@
   function shoppingDuplicate(){
     if(!shoppingDraft)return;
     if(shoppingDirty&&!confirm('Reutilizar os produtos? As alterações não salvas da compra atual serão descartadas.'))return;
-    shoppingDraft={...cloneShopping(shoppingDraft),id:makeId(),row:null,title:`${shoppingDraft.title.replace(/\s*\(cópia\)$/i,'').slice(0,89)} (cópia)`,date:nowISO(),status:'Planejada',expenseId:'',createdBy:profile?.email||'',updated:'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),items:shoppingDraft.items.filter(item=>item.name.trim()).map(item=>({...item,id:makeId(),bought:false}))};
+    shoppingDraft={...cloneShopping(shoppingDraft),id:makeId(),row:null,title:`${shoppingDraft.title.replace(/\s*\(cópia\)$/i,'').slice(0,89)} (cópia)`,date:nowISO(),status:'Planejada',expenseId:'',createdBy:profile?.email||'',updated:'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),items:shoppingDraft.items.filter(item=>item.name.trim()).map(item=>({...item,id:makeId(),bought:true}))};
     if(!shoppingDraft.items.length)shoppingDraft.items.push(blankShoppingItem());
     shoppingDirty=true;shoppingRevision++;shoppingView='new';renderShopping();
     if(page==='shopping')navigateTo('shopping','shopping-new');
@@ -386,7 +389,7 @@
     if(shoppingDraft.status==='Finalizada')throw Error('Uma compra registrada não pode ser alterada nesta tela. Reutilize os produtos em um novo registro.');
     const list=cloneShopping(shoppingDraft);list.title=$('#shoppingTitle').value.trim();list.date=$('#shoppingDate').value;
     list.payer=$('#shoppingPayer').value;list.payment=$('#shoppingPayment').value;list.purchasedDate=$('#shoppingPurchaseDate').value;
-    list.items=list.items.filter(item=>item.name.trim());validateShopping(list);
+    list.items=list.items.filter(item=>item.name.trim()).map(item=>({...item,bought:true}));validateShopping(list);
     list.updated=new Date().toISOString();shoppingSaving=true;
     const revision=shoppingRevision;
     $('#shoppingSave').disabled=true;$('#shoppingSave').textContent='Salvando…';
@@ -424,19 +427,16 @@
   }
   function updateShoppingTotals(){
     if(!shoppingDraft)return;
-    const {named,bought,estimated,actual}=shoppingTotals(shoppingDraft);
-    $('#shoppingProgress').textContent=`${bought.length} de ${named.length} adquiridos`;
-    $('#shoppingEstimated').textContent=money(estimated);
+    const {bought,actual}=shoppingTotals(shoppingDraft);
+    $('#shoppingProgress').textContent=`${bought.length} ${bought.length===1?'produto':'produtos'}`;
     $('#shoppingActual').textContent=money(actual);
     $('#shoppingFinish').disabled=shoppingSaving||shoppingDraft.status==='Finalizada'||!bought.length;
   }
   function shoppingRenderItems(){
     const list=shoppingDraft,locked=list.status==='Finalizada',container=$('#shoppingItems');container.replaceChildren();
-    for(const item of list.items){
-      const row=createCell('div',null,`shopping-item${item.bought?' checked':''}`);
-      const boughtWrap=createCell('label',null,'shopping-check-cell');
-      const bought=createCell('input');bought.type='checkbox';bought.checked=item.bought;bought.disabled=locked;bought.setAttribute('aria-label',`Comprado: ${item.name||'produto sem nome'}`);
-      bought.addEventListener('change',()=>{item.bought=bought.checked;row.classList.toggle('checked',item.bought);shoppingChanged();});boughtWrap.append(bought);
+    const items=locked?shoppingTotals(list).bought:list.items;
+    for(const item of items){
+      const row=createCell('div',null,'shopping-item');
       const name=createCell('input');name.type='text';name.placeholder='Ex.: Arroz 5 kg';name.maxLength=120;name.value=item.name;name.disabled=locked;name.setAttribute('aria-label','Nome do produto');name.addEventListener('input',()=>{item.name=name.value;shoppingChanged();});
       const qty=createCell('input');qty.type='number';qty.min='0.01';qty.max='100000';qty.step='0.01';qty.inputMode='decimal';qty.value=String(item.qty);qty.disabled=locked;qty.setAttribute('aria-label','Quantidade');
       const price=prepareBRLField(createCell('input'));price.value=item.unitCents===null?'':money(item.unitCents);price.disabled=locked;price.setAttribute('aria-label','Preço unitário em reais');
@@ -447,21 +447,21 @@
       sub.textContent=item.unitCents===null?'—':money(Math.round(item.qty*item.unitCents));
       const remove=createCell('button','×','shopping-remove');remove.type='button';remove.title='Remover produto';remove.setAttribute('aria-label',`Remover ${item.name||'produto'}`);remove.disabled=locked;
       remove.addEventListener('click',()=>{list.items=list.items.filter(i=>i.id!==item.id);shoppingRenderItems();shoppingChanged();});
-      row.append(boughtWrap,name,qty,price,sub,remove);container.append(row);
+      row.append(name,qty,price,sub,remove);container.append(row);
     }
     if(!list.items.length)container.append(createCell('p','Nenhum produto informado. Adicione um item desta compra.','shopping-no-items'));
     updateShoppingTotals();
   }
   function renderShopping(){
     $('#shoppingOpenCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').length);
-    $('#shoppingPendingCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').reduce((sum,l)=>sum+l.items.filter(i=>i.name.trim()&&!i.bought).length,0));
+    $('#shoppingPendingCount').textContent=String(shoppingLists.filter(l=>l.status!=='Finalizada').reduce((sum,l)=>sum+l.items.filter(i=>i.name.trim()).length,0));
     $('#shoppingFinishedCount').textContent=String(shoppingLists.filter(l=>l.status==='Finalizada').length);
     $('#shoppingListCount').textContent=`${shoppingLists.length} ${shoppingLists.length===1?'compra':'compras'}`;
     const rail=$('#shoppingListCards');rail.replaceChildren();
     if(!shoppingLists.length)rail.append(createCell('p','Nenhuma compra cadastrada ainda.','shopping-rail-empty'));
     for(const list of shoppingLists){
       const {named,bought,estimated}=shoppingTotals(list),button=createCell('button',null,`shopping-list-card${shoppingDraft?.id===list.id?' selected':''}`);button.type='button';
-      const title=createCell('strong',list.title),badge=createCell('span',list.status==='Finalizada'?'✓ Registrada':`${bought.length}/${named.length} adquiridos`,'shopping-list-badge');
+      const title=createCell('strong',list.title),badge=createCell('span',list.status==='Finalizada'?'✓ Registrada':`${named.length} ${named.length===1?'produto':'produtos'}`,'shopping-list-badge');
       const meta=createCell('small',`${dateLabel(list.status==='Finalizada'?(list.purchasedDate||list.date):list.date)} · ${money(estimated)}`);
       button.append(title,badge,meta);button.addEventListener('click',()=>shoppingSelect(list.id));rail.append(button);
     }
@@ -483,10 +483,10 @@
     if(!shoppingDraft||shoppingSaving||shoppingDraft.status==='Finalizada')return;
     try{
       // Salvar confirma a linha real da lista antes de preparar a transação da compra.
-      if(shoppingDirty||!shoppingDraft.row)await shoppingSave(true);
+      if(shoppingDirty||!shoppingDraft.row||shoppingDraft.items.some(item=>item.name.trim()&&!item.bought))await shoppingSave(true);
       const list=cloneShopping(shoppingDraft),{bought,actual}=shoppingTotals(list);
-      if(!bought.length)throw Error('Marque pelo menos um produto adquirido nesta compra.');
-      if(bought.some(item=>item.unitCents===null||!Number.isFinite(item.unitCents)||!Number.isFinite(item.qty)||item.qty<=0))throw Error('Preencha a quantidade e o preço de todos os produtos marcados.');
+      if(!bought.length)throw Error('Informe pelo menos um produto desta compra.');
+      if(bought.some(item=>item.unitCents===null||!Number.isFinite(item.unitCents)||!Number.isFinite(item.qty)||item.qty<=0))throw Error('Preencha a quantidade e o preço de todos os produtos da compra.');
       if(!Number.isSafeInteger(actual)||actual<=0||actual>100000000000)throw Error('Confira os preços. O total precisa ser maior que zero.');
       if(!list.payer||!list.payment||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(list.purchasedDate))throw Error('Informe quem pagou, a forma de pagamento e a data da compra.');
       if(!confirm(`Registrar a compra "${list.title}" nas finanças?\n\n${bought.length} produtos adquiridos\nTotal pago: ${money(actual)}\n\nSerá criado UM lançamento de despesa. Depois, os produtos ficarão apenas para consulta.`))return;
