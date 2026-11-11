@@ -205,6 +205,8 @@ body.motion-disabled *,body.motion-disabled *::before,body.motion-disabled *::af
 .shopping-no-items{font-size:12px;color:#acc1c9;text-align:center;padding:26px 0}
 .shopping-add-item{margin-top:13px;padding:12px 15px;border:1px dashed #6da68b;background:#23403860;border-radius:11px;color:#b8f5b9;font-weight:800;font-size:12px;width:100%}
 .shopping-add-item:hover{background:#2f5749}
+.shopping-shortcut-hint{display:inline-flex;align-items:center;margin-left:10px;padding:3px 8px;border:1px solid #61987f;border-radius:7px;color:#b4d3c3;font-size:10px;font-weight:700;white-space:nowrap}
+@media(max-width:590px){.shopping-shortcut-hint{display:block;width:max-content;max-width:100%;margin:6px auto 0}}
 .shopping-totals{display:grid;grid-template-columns:1fr;gap:12px;margin-top:22px}
 .shopping-totals>div{display:grid;gap:8px;background:#203541;border:1px solid #385363;border-radius:13px;padding:17px}
 .shopping-totals>div.shopping-real-total{background:linear-gradient(125deg,#295a48,#213d3b);border-color:#508a64}
