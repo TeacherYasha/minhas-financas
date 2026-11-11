@@ -461,3 +461,11 @@ body.motion-disabled .route-curtain{display:none!important}
 .food-budget-bar.over-budget i{background:linear-gradient(90deg,#ffb073,#fa796d)}
 @media(max-width:700px){.food-budget{padding:17px;border-radius:17px}.food-budget-head{flex-direction:column;gap:12px}.food-budget-grid{grid-template-columns:1fr}.food-budget-card strong{font-size:27px}}
 @media(prefers-reduced-motion:reduce){.food-budget-bar i{transition:none}}
+
+/* Edição de compras já lançadas: ação destacada e estado de alteração. */
+.shopping-actions .shopping-edit-button{background:#2d5748;color:#d2f9d0;border-color:#76b88c}
+.shopping-actions .shopping-edit-button:hover{background:#3b6e57;border-color:#abedaf}
+.shopping-actions #shoppingCancelEdit{border-color:#8a746a;color:#f2d1bd;background:#423b3e}
+.shopping-actions #shoppingSave:not(.hidden){white-space:nowrap}
+.shopping-checkout h3{transition:color .2s ease}
+@media(max-width:590px){.shopping-actions .shopping-edit-button{width:100%}}
