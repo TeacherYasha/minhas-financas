@@ -482,10 +482,14 @@
     const liveList=liveListResponse.values?.[0];
     if(!liveList||String(liveList[0]||'')!==original.id||String(liveList[3]||'')!=='Finalizada'||String(liveList[5]||'')!==original.expenseId)throw Error('O registro da compra mudou. Atualize o histórico antes de salvar.');
     if(String(liveList[6]||'')!==String(original.updated||''))throw Error('Esta compra foi alterada em outro dispositivo. Atualize o histórico para evitar sobrescrita.');
-    for(const column of [1,2,4,8,9,10]){
+    for(const column of [1,2,8,9,10]){
       const expected=shoppingRow(original)[column];
       if(String(liveList[column]??'')!==String(expected??''))throw Error('Esta compra foi modificada fora do site. Atualize o histórico antes de editar.');
     }
+    // Compras antigas podem ter JSON sem IDs ou com campos em outra ordem.
+    // Compare os produtos, não a representação literal do arquivo.
+    const fingerprint=items=>JSON.stringify(items.map(item=>[item.name,Number(item.qty),item.unitCents===null?null:Number(item.unitCents),Boolean(item.bought)]));
+    if(fingerprint(parseShoppingList(liveList,list.row-2).items)!==fingerprint(original.items))throw Error('Os produtos foram alterados em outro dispositivo. Atualize o histórico antes de salvar.');
     const matches=(liveEntriesResponse.values||[]).map((row,index)=>({row,rowNumber:index+2})).filter(value=>String(value.row[0]||'')===original.expenseId);
     if(matches.length!==1)throw Error('Não foi possível localizar uma única despesa vinculada. Nenhuma alteração foi salva.');
     const {row:liveExpense,rowNumber}=matches[0];
