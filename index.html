@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261110-24" />
+  <link rel="stylesheet" href="style.css?v=20261111-25" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261110-24" defer></script>
+  <script src="app.js?v=20261111-25" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -110,7 +110,7 @@
         </section>
         <section id="shoppingPanel" class="page-feature shopping-feature hidden" aria-label="Registro detalhado de compras realizadas">
           <div class="feature-intro"><div><span class="overline">REGISTRO DE COMPRAS REALIZADAS</span><h2>Sua compra, produto por produto 🛒</h2><p>Registre os produtos e os preços de uma compra que você já fez. O total pago será lançado como uma única despesa.</p></div><button type="button" id="shoppingNew" class="feature-action">＋ Registrar compra</button></div>
-          <div class="feature-stats shopping-stats"><article><span>COMPRAS EM CADASTRO</span><strong id="shoppingOpenCount">0</strong><small>Aguardando lançamento financeiro</small></article><article><span>PRODUTOS NÃO CONFERIDOS</span><strong id="shoppingPendingCount">0</strong><small>Nos registros ainda abertos</small></article><article><span>COMPRAS REGISTRADAS</span><strong id="shoppingFinishedCount">0</strong><small>Já lançadas nas finanças</small></article></div>
+          <div class="feature-stats shopping-stats"><article><span>COMPRAS EM CADASTRO</span><strong id="shoppingOpenCount">0</strong><small>Aguardando lançamento financeiro</small></article><article><span>PRODUTOS CADASTRADOS</span><strong id="shoppingPendingCount">0</strong><small>Nas compras ainda abertas</small></article><article><span>COMPRAS REGISTRADAS</span><strong id="shoppingFinishedCount">0</strong><small>Já lançadas nas finanças</small></article></div>
           <section class="food-budget" aria-label="Limites de gastos com mercado e alimentação">
             <div class="food-budget-head"><div><span class="overline">PLANEJAMENTO DE ALIMENTAÇÃO</span><h3>Nosso limite de mercado</h3><p>Os valores abaixo consideram somente despesas de Mercado e Alimentação já pagas. Este painel não cria novos lançamentos.</p></div><span id="foodBudgetPeriod" class="food-budget-period">Mês atual</span></div>
             <div class="food-budget-grid">
@@ -121,14 +121,14 @@
           <div class="shopping-layout">
             <aside class="shopping-list-rail"><div class="shopping-rail-head"><h3>Compras cadastradas</h3><span id="shoppingListCount">0 compras</span></div><div id="shoppingListCards" class="shopping-list-cards"></div></aside>
             <div id="shoppingEditor" class="shopping-editor">
-              <div id="shoppingEmpty" class="shopping-placeholder"><span>🧺</span><h3>Registre uma compra que você já fez</h3><p>Informe os produtos adquiridos, as quantidades e os preços pagos. Tudo ficará organizado em um só registro.</p><button id="shoppingEmptyCreate" type="button" class="feature-action">＋ Cadastrar compra</button></div>
+              <div id="shoppingEmpty" class="shopping-placeholder"><span>🧺</span><h3>Registre uma compra que você já fez</h3><p>Informe os produtos comprados, as quantidades e os preços pagos. Tudo ficará organizado em um só registro.</p><button id="shoppingEmptyCreate" type="button" class="feature-action">＋ Cadastrar compra</button></div>
               <div id="shoppingWorkspace" class="hidden">
                 <div class="shopping-editor-top"><label>Identificação da compra<input id="shoppingTitle" maxlength="100" placeholder="Ex.: Mercado de sábado" /></label><label>Data do cadastro<input id="shoppingDate" type="date" /></label></div>
-                <div class="shopping-items-title"><div><h3>Produtos adquiridos</h3><p>Marque os produtos que realmente foram comprados.</p></div><span id="shoppingProgress">0 de 0 adquiridos</span></div>
-                <div class="shopping-items-table"><div class="shopping-items-head"><span>ADQUIRIDO</span><span>PRODUTO</span><span>QTD.</span><span>PREÇO PAGO/UN.</span><span>SUBTOTAL</span><span></span></div><div id="shoppingItems"></div></div>
+                <div class="shopping-items-title"><div><h3>Produtos comprados</h3><p>Informe os itens da compra realizada e os valores pagos.</p></div><span id="shoppingProgress">0 produtos</span></div>
+                <div class="shopping-items-table"><div class="shopping-items-head"><span>PRODUTO</span><span>QTD.</span><span>PREÇO PAGO/UN.</span><span>SUBTOTAL</span><span></span></div><div id="shoppingItems"></div></div>
                 <button type="button" id="shoppingAddItem" class="shopping-add-item">＋ Incluir produto comprado</button>
-                <div class="shopping-totals"><div><small>TOTAL DOS PRODUTOS COM PREÇO INFORMADO</small><strong id="shoppingEstimated">R$ 0,00</strong></div><div class="shopping-real-total"><small>TOTAL PAGO PELOS PRODUTOS MARCADOS</small><strong id="shoppingActual">R$ 0,00</strong></div></div>
-                <div class="shopping-checkout"><h3>Registrar a despesa da compra</h3><p>Confirme quem pagou e a data da compra já realizada. Os produtos marcados formarão uma única despesa.</p><div class="shopping-checkout-fields"><label>Quem pagou?<select id="shoppingPayer"><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option><option value="Ambos">Ambos</option></select></label><label>Forma de pagamento<select id="shoppingPayment"><option value="">Selecione...</option><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Cartão de débito</option><option value="Crédito">Cartão de crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option></select></label><label>Data da compra realizada<input id="shoppingPurchaseDate" type="date" /></label></div></div>
+                <div class="shopping-totals"><div class="shopping-real-total"><small>TOTAL PAGO NESTA COMPRA</small><strong id="shoppingActual">R$ 0,00</strong></div></div>
+                <div class="shopping-checkout"><h3>Registrar a despesa da compra</h3><p>Confirme quem pagou e a data da compra já realizada. Todos os produtos informados formarão uma única despesa.</p><div class="shopping-checkout-fields"><label>Quem pagou?<select id="shoppingPayer"><option value="Crispim">Crispim</option><option value="Yasha">Yasha</option><option value="Ambos">Ambos</option></select></label><label>Forma de pagamento<select id="shoppingPayment"><option value="">Selecione...</option><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Débito">Cartão de débito</option><option value="Crédito">Cartão de crédito</option><option value="Transferência">Transferência</option><option value="Boleto">Boleto</option></select></label><label>Data da compra realizada<input id="shoppingPurchaseDate" type="date" /></label></div></div>
                 <div class="shopping-actions"><span id="shoppingSavedStatus">Nenhuma alteração pendente</span><div><button type="button" id="shoppingDuplicate" class="shopping-secondary">Reutilizar produtos em nova compra</button><button type="button" id="shoppingSave" class="shopping-secondary">Salvar produtos</button><button type="button" id="shoppingFinish" class="feature-action">✓ Registrar compra nas finanças</button></div></div>
               </div>
             </div>
