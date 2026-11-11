@@ -47,6 +47,7 @@
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
   let incomeView='all',shoppingView='overview',navSelection='overview';
+  let shoppingEditingFinalized=false,shoppingEditSnapshot=null;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -102,10 +103,10 @@
     await loadSheetTabId();if(shoppingSheetTabId===null)throw Error('A aba ListasCompras não foi encontrada na Planilha Google.');
     const data=await googleRequest(`${shoppingRangeURL('A2:K')}?valueRenderOption=UNFORMATTED_VALUE`);
     shoppingLists=(data.values||[]).map(parseShoppingList).filter(list=>list.id).sort((a,b)=>b.updated.localeCompare(a.updated));
-    if(shoppingDraft&&!shoppingDirty){const found=shoppingLists.find(item=>item.id===shoppingDraft.id);if(found)shoppingDraft={...found,items:found.items.map(item=>({...item}))};}
+    if(shoppingDraft&&!shoppingDirty&&!shoppingEditingFinalized){const found=shoppingLists.find(item=>item.id===shoppingDraft.id);if(found)shoppingDraft={...found,items:found.items.map(item=>({...item}))};}
     if(page==='shopping')renderShopping();
   }
-  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];shoppingLists=[];shoppingDraft=null;shoppingDirty=false;clearTimeout(shoppingSaveTimer);clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;$('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');$('#routeCurtain').className='route-curtain';initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');updateLoginOptions();}
+  function showLoggedOut() {token='';tokenExpires=0;profile=null;entries=[];shoppingLists=[];shoppingDraft=null;shoppingDirty=false;shoppingEditingFinalized=false;shoppingEditSnapshot=null;clearTimeout(shoppingSaveTimer);clearTimeout(navSwapTimer);clearTimeout(navCleanTimer);clearTimeout(navDetailTimer);navSequence++;$('.main-content').classList.remove('page-leaving','page-pre-enter','page-entering');$('#routeCurtain').className='route-curtain';initialMonthResolved=false;$('#app').classList.add('hidden');$('#login').classList.remove('hidden');updateLoginOptions();}
   function showLoggedIn() {$('#login').classList.add('hidden');$('#app').classList.remove('hidden');const name=profile?.name||profile?.email?.split('@')[0]||'Família';$('#sideName').textContent=name.split(' ')[0];$('#sideAvatar').textContent=name.charAt(0).toUpperCase();$('#userAvatar').textContent=name.charAt(0).toUpperCase();requestAnimationFrame(()=>syncNavIndicator(true));}
   function isYashaAccount() {return ['yashasantos10@gmail.com','yashamsantos@gmail.com'].includes(String(profile?.email||'').trim().toLowerCase());}
   async function login(forceAccountSelection=false) {
@@ -341,17 +342,20 @@
     updateShoppingTotals();
   }
   function shoppingNewList(){
+    if(shoppingSaving)return false;
     if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return false;
     shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
     // Abrir o formulário vazio não equivale a alterar uma compra.
+    shoppingEditingFinalized=false;shoppingEditSnapshot=null;
     shoppingDirty=false;shoppingRevision++;
     shoppingView='new';renderShopping();
     if(page==='shopping'){navigateTo('shopping','shopping-new');$('#shoppingTitle').focus();$('#shoppingTitle').select();}
     return true;
   }
   function shoppingOpenNew(){
+    if(shoppingSaving)return false;
     // Voltar pelo submenu deve preservar o rascunho em andamento, sem descartá-lo.
-    if(shoppingDraft&&!shoppingDraft.row&&shoppingDraft.status!=='Finalizada'){
+    if(shoppingDraft&&!shoppingEditingFinalized&&!shoppingDraft.row&&shoppingDraft.status!=='Finalizada'){
       shoppingView='new';
       if(page==='shopping')navigateTo('shopping','shopping-new');
       return true;
@@ -359,17 +363,40 @@
     return shoppingNewList();
   }
   function shoppingSelect(id){
-    if(shoppingDraft?.id===id)return;
+    if(shoppingSaving||shoppingDraft?.id===id)return;
     if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return;
     const found=shoppingLists.find(list=>list.id===id);if(!found)return;
-    shoppingDraft=cloneShopping(found);shoppingDirty=false;shoppingView='history';renderShopping();
+    shoppingDraft=cloneShopping(found);shoppingDirty=false;shoppingEditingFinalized=false;shoppingEditSnapshot=null;shoppingView='history';renderShopping();
     if(page==='shopping')navigateTo('shopping','shopping-history');
   }
+  function shoppingStartEdit(){
+  if(!shoppingDraft||shoppingSaving||shoppingDraft.status!=='Finalizada')return;
+  const original=shoppingLists.find(item=>item.id===shoppingDraft.id);
+  if(!original)return toast('Compra não encontrada. Atualize o histórico.',true);
+  shoppingEditSnapshot=cloneShopping(original);
+  shoppingDraft=cloneShopping(original);
+  // Ignorar itens históricos que não integraram o valor já lançado.
+  shoppingDraft.items=shoppingTotals(original).bought.map(item=>({...item,bought:true}));
+  if(!shoppingDraft.items.length)shoppingDraft.items=[blankShoppingItem()];
+  shoppingEditingFinalized=true;shoppingDirty=false;shoppingRevision++;
+  shoppingView='history';renderShopping();
+  $('#shoppingTitle').focus();
+  toast('Edição ativada. Ao salvar, a despesa original também será atualizada.');
+}
+  function shoppingCancelEdit(){
+  if(!shoppingEditingFinalized||shoppingSaving)return;
+  if(shoppingDirty&&!confirm('Descartar as alterações desta compra?'))return;
+  const original=shoppingLists.find(item=>item.id===shoppingDraft?.id);
+  shoppingDraft=original?cloneShopping(original):null;
+  shoppingEditingFinalized=false;shoppingEditSnapshot=null;shoppingDirty=false;shoppingRevision++;
+  renderShopping();
+}
   function shoppingDuplicate(){
-    if(!shoppingDraft)return;
+    if(!shoppingDraft||shoppingSaving)return;
     if(shoppingDirty&&!confirm('Reutilizar os produtos? As alterações não salvas da compra atual serão descartadas.'))return;
     shoppingDraft={...cloneShopping(shoppingDraft),id:makeId(),row:null,title:`${shoppingDraft.title.replace(/\s*\(cópia\)$/i,'').slice(0,89)} (cópia)`,date:nowISO(),status:'Planejada',expenseId:'',createdBy:profile?.email||'',updated:'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),items:shoppingDraft.items.filter(item=>item.name.trim()).map(item=>({...item,id:makeId(),bought:true}))};
     if(!shoppingDraft.items.length)shoppingDraft.items.push(blankShoppingItem());
+    shoppingEditingFinalized=false;shoppingEditSnapshot=null;
     shoppingDirty=true;shoppingRevision++;shoppingView='new';renderShopping();
     if(page==='shopping')navigateTo('shopping','shopping-new');
     toast('Novo registro criado com os produtos da compra anterior. Confira os valores e salve.');
@@ -425,6 +452,70 @@
     }catch(error){if(!silent)toast(error.message||'Não foi possível salvar os produtos.',true);throw error;}
     finally{shoppingSaving=false;$('#shoppingSave').disabled=false;$('#shoppingSave').textContent='Salvar produtos';}
   }
+  async function shoppingSaveCompleted(){
+  if(!shoppingEditingFinalized||!shoppingDraft||shoppingSaving)return;
+  if(!shoppingDirty){toast('Nenhuma alteração para salvar.');return;}
+  const original=shoppingEditSnapshot;
+  const list=cloneShopping(shoppingDraft);
+  list.title=$('#shoppingTitle').value.trim();
+  list.payer=$('#shoppingPayer').value;
+  list.payment=$('#shoppingPayment').value;
+  list.purchasedDate=$('#shoppingPurchaseDate').value;
+  list.items=list.items.filter(item=>item.name.trim()).map(item=>({...item,bought:true}));
+  try{
+    validateShopping(list);
+    const {bought,actual}=shoppingTotals(list);
+    if(!original||original.id!==list.id||original.status!=='Finalizada'||!original.expenseId||!Number.isInteger(list.row))throw Error('A compra não possui uma despesa vinculada válida. Não é seguro alterá-la automaticamente.');
+    if(!bought.length||bought.some(item=>item.unitCents===null||!Number.isSafeInteger(item.unitCents)||!Number.isFinite(item.qty)||item.qty<=0))throw Error('Informe nome, quantidade e preço de cada produto comprado.');
+    if(!Number.isSafeInteger(actual)||actual<=0||actual>100000000000)throw Error('Confira os valores. O total precisa ser maior que zero.');
+    if(!['Crispim','Yasha','Ambos'].includes(list.payer)||!list.payment||!/^\d{4}-\d{2}-\d{2}$/.test(list.purchasedDate))throw Error('Confira quem pagou, a forma de pagamento e a data da compra.');
+    const previous=entries.find(entry=>entry.id===original.expenseId);
+    if(!previous)throw Error('A despesa vinculada não foi encontrada no extrato. Atualize a página antes de editar.');
+    if(!confirm(`Salvar as alterações de "${list.title}"?\n\nValor anterior no financeiro: ${money(previous.cents)}\nNovo total da compra: ${money(actual)}\n\nA despesa EXISTENTE será atualizada, sem criar outro gasto.`))return;
+    shoppingSaving=true;renderShopping();
+    await loadSheetTabId();
+    if(shoppingSheetTabId===null)throw Error('A aba ListasCompras não está disponível.');
+    const [liveListResponse,liveEntriesResponse]=await Promise.all([
+      googleRequest(`${shoppingRangeURL(`A${list.row}:K${list.row}`)}?valueRenderOption=UNFORMATTED_VALUE`),
+      googleRequest(`${rangeURL('A2:S')}?valueRenderOption=UNFORMATTED_VALUE`)
+    ]);
+    const liveList=liveListResponse.values?.[0];
+    if(!liveList||String(liveList[0]||'')!==original.id||String(liveList[3]||'')!=='Finalizada'||String(liveList[5]||'')!==original.expenseId)throw Error('O registro da compra mudou. Atualize o histórico antes de salvar.');
+    if(String(liveList[6]||'')!==String(original.updated||''))throw Error('Esta compra foi alterada em outro dispositivo. Atualize o histórico para evitar sobrescrita.');
+    for(const column of [1,2,4,8,9,10]){
+      const expected=shoppingRow(original)[column];
+      if(String(liveList[column]??'')!==String(expected??''))throw Error('Esta compra foi modificada fora do site. Atualize o histórico antes de editar.');
+    }
+    const matches=(liveEntriesResponse.values||[]).map((row,index)=>({row,rowNumber:index+2})).filter(value=>String(value.row[0]||'')===original.expenseId);
+    if(matches.length!==1)throw Error('Não foi possível localizar uma única despesa vinculada. Nenhuma alteração foi salva.');
+    const {row:liveExpense,rowNumber}=matches[0];
+    if(String(liveExpense[2]||'')!=='Saída'||String(liveExpense[3]||'')!=='Mercado')throw Error('A despesa vinculada foi modificada. Confira o extrato antes de editar a compra.');
+    if(Math.round(Number(liveExpense[4]||0)*100)!==previous.cents||String(liveExpense[1]||'')!==previous.description||String(liveExpense[6]||'')!==previous.due||String(liveExpense[14]||'')!==previous.payer||String(liveExpense[15]||'')!==previous.payment||String(liveExpense[18]||'')!==previous.quantity||String(liveExpense[7]||'')!==previous.status)throw Error('A despesa foi modificada em outro dispositivo. Atualize o site antes de salvar.');
+    list.updated=new Date().toISOString();
+    const line=rowNumber-1;
+    const patch=(startColumnIndex,values)=>({updateCells:{range:{sheetId:sheetTabId,startRowIndex:line,endRowIndex:line+1,startColumnIndex,endColumnIndex:startColumnIndex+values.length},rows:[{values:values.map(shoppingCell)}],fields:'userEnteredValue'}});
+    const requests=[
+      {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(list).map(shoppingCell)}],fields:'userEnteredValue'}},
+      patch(1,[`Compra — ${list.title}`]),
+      patch(4,[actual/100]),
+      patch(6,[list.purchasedDate]),
+      patch(14,[list.payer,list.payment]),
+      patch(18,[`${bought.length} ${bought.length===1?'item':'itens'}`])
+    ];
+    await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})});
+    shoppingEditingFinalized=false;shoppingEditSnapshot=null;shoppingDirty=false;
+    shoppingDraft=cloneShopping(list);
+    const idx=shoppingLists.findIndex(item=>item.id===list.id);
+    if(idx>=0)shoppingLists[idx]=cloneShopping(list);
+    try{await Promise.all([loadRows(),loadShoppingLists()]);}catch(refreshError){console.warn('Atualização feita, mas a leitura falhou:',refreshError.message);}
+    toast(`Compra atualizada! Total corrigido para ${money(actual)}, sem duplicar despesas.`);
+  }catch(error){
+    toast(error.message||'Não foi possível alterar a compra.',true);
+  }finally{
+    shoppingSaving=false;
+    if(shoppingDraft)renderShopping();
+  }
+}
   function updateShoppingTotals(){
     if(!shoppingDraft)return;
     const {bought,actual}=shoppingTotals(shoppingDraft);
@@ -433,7 +524,7 @@
     $('#shoppingFinish').disabled=shoppingSaving||shoppingDraft.status==='Finalizada'||!bought.length;
   }
   function shoppingRenderItems(){
-    const list=shoppingDraft,locked=list.status==='Finalizada',container=$('#shoppingItems');container.replaceChildren();
+    const list=shoppingDraft,locked=shoppingSaving||(list.status==='Finalizada'&&!shoppingEditingFinalized),container=$('#shoppingItems');container.replaceChildren();
     const items=locked?shoppingTotals(list).bought:list.items;
     for(const item of items){
       const row=createCell('div',null,'shopping-item');
@@ -454,7 +545,7 @@
   }
   function shoppingNumpadEnter(event){
     if(event.code!=='NumpadEnter'||event.key!=='Enter'||event.repeat||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
-    if(page!=='shopping'||shoppingView!=='new'||!shoppingDraft||shoppingDraft.status==='Finalizada'||shoppingSaving)return;
+    if(page!=='shopping'||(shoppingView!=='new'&&!shoppingEditingFinalized)||!shoppingDraft||(shoppingDraft.status==='Finalizada'&&!shoppingEditingFinalized)||shoppingSaving)return;
     // Só durante a edição da compra; selects e botões mantêm a ação habitual do Enter.
     if(!event.target?.closest?.('#shoppingWorkspace')||event.target.closest('button,select,a,textarea,[contenteditable="true"]'))return;
     event.preventDefault();
@@ -475,15 +566,24 @@
     }
     $('#shoppingEmpty').classList.toggle('hidden',Boolean(shoppingDraft));$('#shoppingWorkspace').classList.toggle('hidden',!shoppingDraft);
     if(!shoppingDraft)return;
-    const list=shoppingDraft,locked=list.status==='Finalizada';
+    const list=shoppingDraft,editing=shoppingEditingFinalized&&list.status==='Finalizada',locked=shoppingSaving||(list.status==='Finalizada'&&!editing);
     $('#shoppingTitle').value=list.title;$('#shoppingDate').value=list.date;$('#shoppingPayer').value=list.payer||'';
     $('#shoppingPayment').value=list.payment||'';$('#shoppingPurchaseDate').value=list.purchasedDate||nowISO();
-    for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked;
-    $('#shoppingAddItem').disabled=locked;$('#shoppingSave').disabled=locked||shoppingSaving;$('#shoppingFinish').disabled=locked||shoppingSaving;
-    $('#shoppingDuplicate').disabled=false;
-    $('#shoppingSavedStatus').textContent=locked?'✓ Compra lançada nas finanças':shoppingDirty?'Alterações ainda não salvas':!list.row?'Nova compra pronta para preencher':'✓ Produtos salvos no Google';
-    $('#shoppingSavedStatus').classList.toggle('unsaved',shoppingDirty&&!locked);
-    $('#shoppingFinish').textContent=locked?'✓ Compra já registrada':'✓ Registrar compra nas finanças';
+    for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked||(id==='shoppingDate'&&list.status==='Finalizada');
+  $('#shoppingAddItem').disabled=locked;$('#shoppingSave').disabled=locked;$('#shoppingFinish').disabled=locked||editing;
+  $('#shoppingDuplicate').disabled=shoppingSaving;
+  $('#shoppingEdit').classList.toggle('hidden',list.status!=='Finalizada'||editing);
+  $('#shoppingEdit').disabled=shoppingSaving;
+  $('#shoppingCancelEdit').classList.toggle('hidden',!editing);
+  $('#shoppingCancelEdit').disabled=shoppingSaving;
+  $('#shoppingSave').classList.toggle('hidden',list.status==='Finalizada'&&!editing);
+  $('#shoppingSave').textContent=editing?'✓ Salvar alterações':'Salvar produtos';
+  $('#shoppingFinish').classList.toggle('hidden',list.status==='Finalizada');
+  $('#shoppingCheckoutTitle').textContent=editing?'Atualizar a despesa da compra':'Registrar a despesa da compra';
+  $('#shoppingCheckoutHelp').textContent=editing?'Os dados e valores serão atualizados na compra e na despesa original, sem duplicar lançamentos.':list.status==='Finalizada'?'Esta compra já foi contabilizada e pode ser editada pelo botão abaixo.':'Confirme quem pagou e a data da compra já realizada. Todos os produtos informados formarão uma única despesa.';
+  $('#shoppingSavedStatus').textContent=editing?(shoppingDirty?'Alterações ainda não salvas':'Editando compra registrada'):locked?'✓ Compra lançada nas finanças':shoppingDirty?'Alterações ainda não salvas':!list.row?'Nova compra pronta para preencher':'✓ Produtos salvos no Google';
+  $('#shoppingSavedStatus').classList.toggle('unsaved',shoppingDirty&&!locked);
+  $('#shoppingFinish').textContent=list.status==='Finalizada'?'✓ Compra já registrada':'✓ Registrar compra nas finanças';
     shoppingRenderItems();
   }
   const shoppingCell=value=>({userEnteredValue:typeof value==='number'?{numberValue:value}:{stringValue:String(value??'')}});
@@ -866,11 +966,13 @@
     $('#personalPersonFilter').addEventListener('change',render);
     $('#shoppingNew').addEventListener('click',shoppingNewList);$('#shoppingEmptyCreate').addEventListener('click',shoppingNewList);
     $('#shoppingDuplicate').addEventListener('click',shoppingDuplicate);
+    $('#shoppingEdit').addEventListener('click',shoppingStartEdit);
+    $('#shoppingCancelEdit').addEventListener('click',shoppingCancelEdit);
     $('#shoppingAddItem').addEventListener('click',()=>{if(!shoppingDraft||shoppingDraft.status==='Finalizada')return;if(shoppingDraft.items.length>=100){toast('Máximo de 100 itens por lista.',true);return;}shoppingDraft.items.push(blankShoppingItem());shoppingRenderItems();shoppingChanged();const inputs=$('#shoppingItems').querySelectorAll('input[aria-label="Nome do produto"]');inputs[inputs.length-1]?.focus();});
     document.addEventListener('keydown',shoppingNumpadEnter);
     for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).addEventListener('change',()=>{if(shoppingDraft&&shoppingDraft.status!=='Finalizada'){shoppingDraft[id==='shoppingTitle'?'title':id==='shoppingDate'?'date':id==='shoppingPayer'?'payer':id==='shoppingPayment'?'payment':'purchasedDate']=$(`#${id}`).value;shoppingChanged();}});
     $('#shoppingTitle').addEventListener('input',()=>{if(shoppingDraft&&shoppingDraft.status!=='Finalizada'){shoppingDraft.title=$('#shoppingTitle').value;shoppingChanged();}});
-    $('#shoppingSave').addEventListener('click',()=>shoppingSave().catch(()=>{}));
+    $('#shoppingSave').addEventListener('click',()=>shoppingEditingFinalized?shoppingSaveCompleted():shoppingSave().catch(()=>{}));
     $('#shoppingFinish').addEventListener('click',shoppingFinish);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden&&authValid()&&profile){loadRows().catch(()=>{});if(page==='shopping'&&!shoppingDirty)loadShoppingLists().catch(()=>{});}});
   }
