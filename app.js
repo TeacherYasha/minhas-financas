@@ -41,12 +41,12 @@
   const monthShift = (key,move) => { const [y,m]=key.split('-').map(Number),d=new Date(y,m-1+move,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
   const monthLabel = (key) => new Date(`${key}-15T12:00:00`).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const HOUSE_CATEGORIES = ['Alimentação','Mercado','Itens de Limpeza','Casa e Cozinha','Moto','Contas','Aluguel','Energia','Água','Internet','Gasolina','Compras online','Saúde','Lazer','Educação','Outros','Outros gastos'];
+  const HOUSE_CATEGORIES = ['Alimentação','Mercado','Itens de Limpeza','Casa e Cozinha','Moto','Contas','Aluguel','Energia','Celular','Água','Internet','Gasolina','Compras online','Saúde','Lazer','Educação','Outros','Outros gastos'];
   const PERSONAL_CATEGORIES = ['Cabelo / Barbeiro','Unhas / Beleza','Cuidados pessoais','Saúde','Vestuário','Lazer','Outros pessoais'];
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
-  let incomeView='all',shoppingView='overview',navSelection='overview';
+  let incomeView='all',shoppingView='overview',navSelection='overview',budgetWeekOffset=0;
   let shoppingEditingFinalized=false,shoppingEditSnapshot=null;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
@@ -297,34 +297,93 @@
     openModal('Entrada');
     $('#category').value=INCOME_CATEGORIES.includes(category)?category:'Outras entradas';
   }
-  const FOOD_WEEK_LIMIT=25000,FOOD_MONTH_LIMIT=100000;
-  function foodBudgetSnapshot(records,today=nowISO()){
-    const date=new Date(`${today}T12:00:00`);
-    const monday=new Date(date);monday.setDate(date.getDate()-((date.getDay()+6)%7));
-    const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
-    const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const weekStart=localDate(monday),weekEnd=localDate(sunday),period=today.slice(0,7);
-    const paid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&['Mercado','Alimentação'].includes(e.category)&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
-    const weekSpent=paid.filter(e=>e.due>=weekStart&&e.due<=weekEnd).reduce((sum,e)=>sum+e.cents,0);
-    const monthSpent=paid.filter(e=>e.due.startsWith(period)).reduce((sum,e)=>sum+e.cents,0);
-    return {period,weekStart,weekEnd,weekSpent,monthSpent};
+  const budgetRules = {
+    groceries: {title:'Mercado e alimentação', categories:['mercado','alimentacao']},
+    gas: {title:'Gasolina', categories:['gasolina','combustivel'], legacyCategories:['moto'], description:/\b(gasolina|combustivel|abastecimento)\b/},
+    rent: {title:'Aluguel', categories:['aluguel'], legacyCategories:['moradia'], description:/\baluguel\b/},
+    energy: {title:'Energia', categories:['energia','energia eletrica'], description:/\b(energia|conta de luz)\b/},
+    phone: {title:'Celular', categories:['celular','telefonia movel'], description:/\b(celular|telefonia movel|recarga de telefone)\b/},
+    haircut: {title:'Corte de cabelo do Neto', categories:['cabelo barbeiro','corte de cabelo','barbeiro'], description:/\b(corte de cabelo|cabelo e barba|barbearia|barbeiro)\b/},
+  };
+  const weeklyBudgets = [['groceries',25000],['gas',5750]];
+  const monthlyBudgets = [['rent',90000],['energy',5000],['phone',7000],['haircut',10000],['groceries',100000]];
+  const normalizeBudgetText = value => String(value??'').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const genericBudgetCategories = ['contas','outros','outros gastos','outros pessoais','cuidados pessoais'];
+
+  function matchesBudget(record,key){
+    const {categories,legacyCategories=[],description:descriptionPattern}=budgetRules[key];
+    const category=normalizeBudgetText(record.category);
+    const description=normalizeBudgetText(record.description);
+    if(key==='haircut'){
+      if(!['neto','crispim'].includes(normalizeBudgetText(record.person)))return false;
+    }else if(normalizeBudgetText(record.scope)==='pessoal'&&key!=='groceries'&&key!=='phone')return false;
+    if(key==='phone'&&(record.installments>1||/\b(parcela\w*|aparelho|smartphone|iphone)\b/.test(description)))return false;
+    return categories.includes(category) ||
+      Boolean(descriptionPattern?.test(description)&&(genericBudgetCategories.includes(category)||legacyCategories.includes(category)));
   }
-  function renderFoodBudget(){
-    const budget=foodBudgetSnapshot(entries);
-    $('#foodBudgetPeriod').textContent=monthLabel(budget.period);
-    const shortDate=iso=>new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    $('#foodWeekDates').textContent=`${shortDate(budget.weekStart)} a ${shortDate(budget.weekEnd)}`;
-    for(const [prefix,spent,limit] of [['Week',budget.weekSpent,FOOD_WEEK_LIMIT],['Month',budget.monthSpent,FOOD_MONTH_LIMIT]]){
-      $(`#food${prefix}Spent`).textContent=money(spent);
-      const remaining=limit-spent,label=$(`#food${prefix}Remaining`),bar=$(`#food${prefix}Bar`);
-      label.textContent=remaining>=0?`${money(remaining)} ainda disponíveis`:`${money(-remaining)} acima do limite`;
-      label.classList.toggle('over-budget',remaining<0);
-      bar.classList.toggle('over-budget',remaining<0);
-      bar.setAttribute('aria-valuenow',String(Math.min(limit,spent)/100));
-      bar.setAttribute('aria-valuetext',`${money(spent)} gastos de ${money(limit)}`);
-      $(`#food${prefix}Fill`).style.width=`${Math.min(100,spent/limit*100)}%`;
+
+  function budgetWeek(today,offset=0){
+    const monday=new Date(`${today}T12:00:00Z`);
+    monday.setUTCDate(monday.getUTCDate()-((monday.getUTCDay()+6)%7)+offset*7);
+    const sunday=new Date(monday);
+    sunday.setUTCDate(sunday.getUTCDate()+6);
+    return {start:monday.toISOString().slice(0,10),end:sunday.toISOString().slice(0,10)};
+  }
+
+  function budgetSnapshot(records,budgets,inPeriod){
+    const paid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&
+      Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due)&&inPeriod(e.due));
+    return budgets.map(([key,limit])=>{
+      const spent=paid.filter(record=>matchesBudget(record,key)).reduce((total,record)=>total+record.cents,0);
+      return {title:budgetRules[key].title,limit,spent};
+    });
+  }
+
+  function renderBudgetCards(container,cards){
+    container.replaceChildren();
+    for(const {title,limit,spent} of cards){
+      const remaining=limit-spent;
+      const card=createCell('article',null,'food-budget-card');
+      const label=createCell('h5',title,'food-budget-label');
+      const track=createCell('div',null,`food-budget-bar${remaining<0?' over-budget':''}`);
+      track.setAttribute('aria-hidden','true');
+      const fill=createCell('i');
+      fill.style.width=`${Math.min(100,spent/limit*100)}%`;
+      track.append(fill);
+      const status=remaining<0?`${money(-remaining)} acima do teto`
+        :remaining>0?`${money(remaining)} de saldo`:'Teto atingido';
+      card.append(label,createCell('strong',money(spent)),
+        createCell('p',`Teto de ${money(limit)}`),track,
+        createCell('small',status,`food-budget-remaining${remaining<0?' over-budget':''}`));
+      container.append(card);
     }
   }
+
+  function renderSpendingLimits(shopping=false){
+    const today=nowISO(),period=shopping?today.slice(0,7):month;
+    const week=budgetWeek(today,shopping?0:budgetWeekOffset);
+    const shortDate=iso=>iso.slice(5).split('-').reverse().join('/');
+    const weekLabel=`${shortDate(week.start)} a ${shortDate(week.end)}`;
+    const weekly=budgetSnapshot(entries,shopping?weeklyBudgets.slice(0,1):weeklyBudgets,
+      date=>date>=week.start&&date<=week.end);
+    const monthly=budgetSnapshot(entries,shopping?monthlyBudgets.slice(-1):monthlyBudgets,
+      date=>date.startsWith(period));
+    if(shopping){
+      $('#foodBudgetPeriod').textContent=monthLabel(period);
+      renderBudgetCards($('#shoppingBudgetCards'),[
+        {...weekly[0],title:`Semana · ${weekLabel}`},
+        {...monthly[0],title:'Mês atual'},
+      ]);
+      return;
+    }
+    $('#budgetWeekDates').textContent=weekLabel;
+    $('#budgetNextWeek').disabled=budgetWeekOffset===0;
+    $('#budgetMonthLabel').textContent=monthLabel(period);
+    renderBudgetCards($('#weeklyBudgetCards'),weekly);
+    renderBudgetCards($('#monthlyBudgetCards'),monthly);
+  }
+
   const cloneShopping = list => ({...list,items:list.items.map(item=>({...item}))});
   const blankShoppingItem = () => ({id:makeId(),name:'',qty:1,unitCents:null,bought:true});
   function shoppingTotals(list){
@@ -875,6 +934,8 @@
     $('#emptyRecordsDetail').textContent=page==='income'?(incomeView==='all'?'Registre um salário ou outra entrada, ou ajuste os filtros.':'Mesmo sem entrada nova neste mês, o dinheiro anterior está no saldo inicial acima.'):'Comece adicionando uma receita ou despesa.';
     $('#incomePanel').classList.toggle('hidden',page!=='income');
     $('.carryover-flow').classList.toggle('hidden',page!=='overview');
+    $('#spendingLimits').classList.toggle('hidden',page!=='overview');
+    if(page==='overview')renderSpendingLimits();
     $('#personalPanel').classList.toggle('hidden',page!=='personal');
     $('#shoppingPanel').classList.toggle('hidden',page!=='shopping');
     $('#shoppingPanel').classList.toggle('shopping-new-view',shoppingView==='new');
@@ -895,7 +956,7 @@
     document.querySelectorAll('#entryFilters [data-filter]').forEach(button=>button.classList.toggle('active',button.dataset.filter===entryFilter));
     if(page==='installments')renderInstallments();
     if(page==='recurring')renderRecurring();
-    if(page==='shopping'){renderFoodBudget();renderShopping();}
+    if(page==='shopping'){renderSpendingLimits(true);renderShopping();}
     const personal=current.filter(e=>e.type==='Saída'&&e.scope==='Pessoal');
     $('#personalCrispimTotal').textContent=money(personal.filter(e=>e.person==='Crispim').reduce((sum,e)=>sum+e.cents,0));
     $('#personalYashaTotal').textContent=money(personal.filter(e=>e.person==='Yasha').reduce((sum,e)=>sum+e.cents,0));
@@ -943,6 +1004,8 @@
     $('#entryFilters').addEventListener('click',event=>{const button=event.target.closest('[data-filter]');if(!button)return;entryFilter=button.dataset.filter;render();});
     $('#viewAllEntries').addEventListener('click',()=>{entryFilter='all';navigateTo('entries','accounts');});
     $('#prevMonth').addEventListener('click',()=>{month=monthShift(month,-1);render();});$('#nextMonth').addEventListener('click',()=>{month=monthShift(month,1);render();});$('#currentMonth').addEventListener('click',()=>{month=currentMonth();render();});$('#refresh').addEventListener('click',async()=>{try{await loadRows(true);if(page==='shopping')await loadShoppingLists();}catch(e){toast(e.message,true)}});
+    $('#budgetPrevWeek').addEventListener('click',()=>{budgetWeekOffset--;renderSpendingLimits();});
+    $('#budgetNextWeek').addEventListener('click',()=>{if(budgetWeekOffset<0){budgetWeekOffset++;renderSpendingLimits();}});
     $('#search').addEventListener('input',render);
     $('#nav').addEventListener('click',event=>{
       const b=event.target.closest('button[data-page]');if(!b)return;

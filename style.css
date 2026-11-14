@@ -442,7 +442,6 @@ body.motion-disabled .route-curtain{display:none!important}
 #entriesPanel.accounts-only .feature-stats article:first-child{display:none}
 @media(max-width:590px){#entriesPanel.accounts-only .feature-stats{grid-template-columns:1fr 1fr}}
 
-/* Limites informativos: compras pagas entram uma única vez, a partir dos lançamentos. */
 .food-budget{margin:18px 0 22px;padding:22px;border:1px solid #466853;border-radius:22px;background:linear-gradient(135deg,#1c3535 0%,#192b38 85%)}
 .food-budget-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
 .food-budget-head h3{font-family:Outfit,'DM Sans',sans-serif;font-size:22px;line-height:1.2;margin:6px 0 7px;color:#effff0}
@@ -450,8 +449,7 @@ body.motion-disabled .route-curtain{display:none!important}
 .food-budget-period{flex:none;display:inline-flex;align-items:center;padding:8px 12px;border:1px solid #537364;border-radius:999px;color:#c4f2be;background:#213f37;font-size:12px;font-weight:700;text-transform:capitalize}
 .food-budget-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .food-budget-card{min-width:0;padding:19px 20px 17px;border:1px solid #395d58;border-radius:17px;background:#10262edb}
-.food-budget-label{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px;color:#97b7b8;font-size:11px;font-weight:800;letter-spacing:.07em}
-.food-budget-label small{color:#b2d9c6;font-size:11px;letter-spacing:0;font-weight:650}
+.food-budget-label{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 0 14px;color:#b6cecc;font-size:13px;font-weight:750}
 .food-budget-card strong{display:block;color:#eeffe7;font-family:Outfit,'DM Sans',sans-serif;font-size:30px;line-height:1.15}
 .food-budget-card p{margin:7px 0 16px;color:#a8c2bf;font-size:12px}
 .food-budget-bar{height:9px;width:100%;border-radius:999px;overflow:hidden;background:#2b4446}
@@ -461,6 +459,12 @@ body.motion-disabled .route-curtain{display:none!important}
 .food-budget-bar.over-budget i{background:linear-gradient(90deg,#ffb073,#fa796d)}
 @media(max-width:700px){.food-budget{padding:17px;border-radius:17px}.food-budget-head{flex-direction:column;gap:12px}.food-budget-grid{grid-template-columns:1fr}.food-budget-card strong{font-size:27px}}
 @media(prefers-reduced-motion:reduce){.food-budget-bar i{transition:none}}
+
+.budget-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 10px}
+.budget-section-head h4{margin:0;font-size:14px;color:#e0eee7}
+.spending-limits .food-budget-grid + .budget-section-head{margin-top:20px}
+.spending-limits #monthlyBudgetCards{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.budget-week-control button:disabled{opacity:.45;cursor:default}
 
 /* Edição de compras já lançadas: ação destacada e estado de alteração. */
 .shopping-actions .shopping-edit-button{background:#2d5748;color:#d2f9d0;border-color:#76b88c}
