@@ -7,6 +7,7 @@
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   const API = 'https://sheets.googleapis.com/v4/spreadsheets';
   const SHOPPING_TAB = 'ListasCompras';
+  const MONTHLY_BILL_COUNT = 24;
   const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
   const $ = (s) => document.querySelector(s);
   const money = (cents) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);
@@ -150,6 +151,34 @@
   function makeRow({id,description,cents,due,category,settled,installment,installments,group,recurring,registered,created,payer,payment,scope,person,quantity,by}) {
     return [id,description,entryKind,category,cents/100,registered,due,settled?(entryKind==='Entrada'?'Recebido':'Pago'):'Pendente',installment||'',installments||'',group||'',recurring?'Sim':'Não',by||profile.email,created,payer||'',payment||'Não informado',scope||'Casa',person||'',quantity||''];
   }
+  function canRepeatExpense(record) {
+    return record?.type==='Saída'&&!record.recurring&&record.installments<=1&&!record.group&&!record.id.startsWith('compra-');
+  }
+  const sheetCell=value=>({userEnteredValue:typeof value==='number'?{numberValue:value}:{stringValue:String(value??'')}});
+  async function repeatExistingExpense(record,form) {
+    if(!canRepeatExpense(record))throw Error('Somente despesas avulsas podem iniciar uma conta mensal.');
+
+    const sheetId=await loadSheetTabId();
+    const {values}=await googleRequest(`${rangeURL(`A${record.row}:S${record.row}`)}?valueRenderOption=UNFORMATTED_VALUE`);
+    const current=values?.[0];
+    if(!current||current[0]!==record.id||current[2]!=='Saída'||current[10]||current[11]==='Sim'||Number(current[9]||0)>1){
+      throw Error('Este lançamento mudou na planilha. Atualize a página antes de tentar novamente.');
+    }
+
+    const group=record.id;
+    const first=makeRow({...form,id:record.id,group,registered:record.registered,created:record.created,by:record.by});
+    const registered=nowISO(),created=new Date().toISOString();
+    const future=Array.from({length:MONTHLY_BILL_COUNT-1},(_,index)=>makeRow({
+      ...form,id:makeId(),due:addMonths(form.due,index+1),settled:false,group,registered,created
+    }));
+    const requests=[
+      {updateCells:{start:{sheetId,rowIndex:record.row-1,columnIndex:0},rows:[{values:first.map(sheetCell)}],fields:'userEnteredValue'}},
+      {appendCells:{sheetId,rows:future.map(row=>({values:row.map(sheetCell)})),fields:'userEnteredValue'}}
+    ];
+    await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})
+    });
+  }
   async function saveForm(event) {
     event.preventDefault();if(isBusy)return;
     setBusy(true);
@@ -157,10 +186,14 @@
       const form=cellValuesFromForm();const registered=nowISO(),created=new Date().toISOString();
       if(editingId) {
         const record=entries.find(r=>r.id===editingId);if(!record)throw Error('Registro não encontrado. Atualize a página.');
-        const row=makeRow({...form,id:record.id,installment:record.installment,installments:record.installments,group:record.group,recurring:record.recurring,registered:record.registered,created:record.created,by:record.by});
-        await googleRequest(rangeURL(`A${record.row}:S${record.row}`)+'?valueInputOption=RAW',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[row]})});
+        if(form.recurring&&!record.recurring) {
+          await repeatExistingExpense(record,form);
+        } else {
+          const row=makeRow({...form,id:record.id,installment:record.installment,installments:record.installments,group:record.group,recurring:record.recurring,registered:record.registered,created:record.created,by:record.by});
+          await googleRequest(rangeURL(`A${record.row}:S${record.row}`)+'?valueInputOption=RAW',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[row]})});
+        }
       } else {
-        const count=form.recurring?24:form.installments,group=count>1?makeId():'',base=Math.floor(form.cents/form.installments),remainder=form.cents%form.installments;
+        const count=form.recurring?MONTHLY_BILL_COUNT:form.installments,group=count>1?makeId():'',base=Math.floor(form.cents/form.installments),remainder=form.cents%form.installments;
         const rows=Array.from({length:count},(_,i)=>makeRow({...form,id:makeId(),cents:form.recurring?form.cents:base+(i<remainder?1:0),due:addMonths(form.due,i),settled:i===0&&count===1?form.settled:false,installment:form.installments>1?i+1:'',installments:form.installments>1?form.installments:'',group,registered,created}));
         await appendRows(rows);
       }
@@ -180,7 +213,7 @@
     $('#payer').value=isYashaAccount()?'Yasha':'Crispim';
     $('#payment').value='';
     $('#modalTitle').textContent=id?'Editar lançamento':'Novo lançamento';
-    $('#recurring').disabled=Boolean(id);$('#installments').disabled=Boolean(id);$('#typeExpense').disabled=Boolean(id);$('#typeIncome').disabled=Boolean(id);
+    $('#installments').disabled=Boolean(id);$('#typeExpense').disabled=Boolean(id);$('#typeIncome').disabled=Boolean(id);
     let record=null;
     if(id){
       record=entries.find(e=>e.id===id);if(!record)return;entryKind=record.type;
@@ -217,7 +250,22 @@
     for(const input of ['#settled','#recurring','#installments'])$(input).closest('label').classList.toggle('hidden',kind==='Entrada');
     $('#settledLabel').textContent=kind==='Entrada'?'Recebido':'Já foi pago';updateScope();updateFormHints();
   }
-  function updateFormHints(){const multiple=Number($('#installments').value)>1,rec=$('#recurring').checked;$('#installments').disabled=rec||Boolean(editingId);$('#settled').disabled=(multiple||rec)&&!editingId;$('#formHelp').textContent=editingId?'A alteração será aplicada somente a este registro.':rec?'A conta será criada nos próximos 24 meses.':multiple?'O valor total será dividido automaticamente entre os meses.':'';}
+  function updateFormHints() {
+    const record=editingId?entries.find(entry=>entry.id===editingId):null;
+    const multiple=Number($('#installments').value)>1,recurring=$('#recurring').checked;
+    const canConvert=canRepeatExpense(record);
+    $('#recurring').disabled=Boolean(editingId)&&!canConvert;
+    $('#installments').disabled=recurring||Boolean(editingId);
+    $('#settled').disabled=(multiple||recurring)&&!editingId;
+    $('#settledHelp').textContent=record?'(neste vencimento)':'(somente lançamento único)';
+    $('#formHelp').textContent=editingId
+      ? canConvert&&recurring
+        ? `Este lançamento será o primeiro vencimento. Os próximos ${MONTHLY_BILL_COUNT-1} serão criados como pendentes.`
+        : 'A alteração será aplicada somente a este registro.'
+      : recurring
+        ? `Serão criados ${MONTHLY_BILL_COUNT} vencimentos mensais a partir da data informada.`
+        : multiple?'O valor total será dividido automaticamente entre os meses.':'';
+  }
   function createCell(tag,text,className){const el=document.createElement(tag);if(text!==undefined&&text!==null)el.textContent=String(text);if(className)el.className=className;return el;}
   const dateLabel=(iso)=>/^\d{4}-\d{2}-\d{2}$/.test(iso)?new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR'):iso||'—';
   function newInstallment(){openModal('Saída');$('#installments').value='2';updateFormHints();}
@@ -497,9 +545,9 @@
     if(Math.round(Number(liveExpense[4]||0)*100)!==previous.cents||String(liveExpense[1]||'')!==previous.description||String(liveExpense[6]||'')!==previous.due||String(liveExpense[14]||'')!==previous.payer||String(liveExpense[15]||'')!==previous.payment||String(liveExpense[18]||'')!==previous.quantity||String(liveExpense[7]||'')!==previous.status)throw Error('A despesa foi modificada em outro dispositivo. Atualize o site antes de salvar.');
     list.updated=new Date().toISOString();
     const line=rowNumber-1;
-    const patch=(startColumnIndex,values)=>({updateCells:{range:{sheetId:sheetTabId,startRowIndex:line,endRowIndex:line+1,startColumnIndex,endColumnIndex:startColumnIndex+values.length},rows:[{values:values.map(shoppingCell)}],fields:'userEnteredValue'}});
+    const patch=(startColumnIndex,values)=>({updateCells:{range:{sheetId:sheetTabId,startRowIndex:line,endRowIndex:line+1,startColumnIndex,endColumnIndex:startColumnIndex+values.length},rows:[{values:values.map(sheetCell)}],fields:'userEnteredValue'}});
     const requests=[
-      {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(list).map(shoppingCell)}],fields:'userEnteredValue'}},
+      {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(list).map(sheetCell)}],fields:'userEnteredValue'}},
       patch(1,[`Compra — ${list.title}`]),
       patch(4,[actual/100]),
       patch(6,[list.purchasedDate]),
@@ -590,7 +638,6 @@
   $('#shoppingFinish').textContent=list.status==='Finalizada'?'✓ Compra já registrada':'✓ Registrar compra nas finanças';
     shoppingRenderItems();
   }
-  const shoppingCell=value=>({userEnteredValue:typeof value==='number'?{numberValue:value}:{stringValue:String(value??'')}});
   async function shoppingFinish(){
     if(!shoppingDraft||shoppingSaving||shoppingDraft.status==='Finalizada')return;
     try{
@@ -616,8 +663,8 @@
       const timestamp=new Date().toISOString(),record=[expenseId,`Compra — ${list.title}`,'Saída','Mercado',actual/100,nowISO(),list.purchasedDate,'Pago','','','','Não',profile.email,timestamp,list.payer,list.payment,'Casa','',`${bought.length} ${bought.length===1?'item':'itens'}`];
       const finished={...list,status:'Finalizada',expenseId,updated:timestamp};
       const requests=[
-        {appendCells:{sheetId:sheetTabId,rows:[{values:record.map(shoppingCell)}],fields:'userEnteredValue'}},
-        {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(finished).map(shoppingCell)}],fields:'userEnteredValue'}}
+        {appendCells:{sheetId:sheetTabId,rows:[{values:record.map(sheetCell)}],fields:'userEnteredValue'}},
+        {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(finished).map(sheetCell)}],fields:'userEnteredValue'}}
       ];
       await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})});
       shoppingDraft=cloneShopping(finished);shoppingDirty=false;
