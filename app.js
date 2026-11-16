@@ -166,10 +166,11 @@
     }
 
     const group=record.id;
-    const first=makeRow({...form,id:record.id,group,registered:record.registered,created:record.created,by:record.by});
+    const series={...form,installments:0,group};
+    const first=makeRow({...series,id:record.id,registered:record.registered,created:record.created,by:record.by});
     const registered=nowISO(),created=new Date().toISOString();
     const future=Array.from({length:MONTHLY_BILL_COUNT-1},(_,index)=>makeRow({
-      ...form,id:makeId(),due:addMonths(form.due,index+1),settled:false,group,registered,created
+      ...series,id:makeId(),due:addMonths(form.due,index+1),settled:false,registered,created
     }));
     const requests=[
       {updateCells:{start:{sheetId,rowIndex:record.row-1,columnIndex:0},rows:[{values:first.map(sheetCell)}],fields:'userEnteredValue'}},
