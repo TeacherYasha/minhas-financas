@@ -7,6 +7,8 @@
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   const API = 'https://sheets.googleapis.com/v4/spreadsheets';
   const SHOPPING_TAB = 'ListasCompras';
+  const PURCHASE_TYPES = ['Mercado e cozinha','Saúde','Lanches','Refeição fora'];
+  const normalizePurchaseType = value => PURCHASE_TYPES.includes(value) ? value : 'Mercado e cozinha';
   const MONTHLY_BILL_COUNT = 24;
   const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
   const $ = (s) => document.querySelector(s);
@@ -42,7 +44,7 @@
   const monthShift = (key,move) => { const [y,m]=key.split('-').map(Number),d=new Date(y,m-1+move,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; };
   const monthLabel = (key) => new Date(`${key}-15T12:00:00`).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const HOUSE_CATEGORIES = ['Alimentação','Mercado','Itens de Limpeza','Casa e Cozinha','Moto','Contas','Aluguel','Energia','Água','Internet','Gasolina','Compras online','Saúde','Lazer','Educação','Outros','Outros gastos'];
+  const HOUSE_CATEGORIES = ['Alimentação','Mercado','Itens de Limpeza','Casa e Cozinha','Mercado e cozinha','Lanches','Refeição fora','Moto','Contas','Aluguel','Energia','Água','Internet','Gasolina','Compras online','Saúde','Lazer','Educação','Outros','Outros gastos'];
   const PERSONAL_CATEGORIES = ['Cabelo / Barbeiro','Unhas / Beleza','Cuidados pessoais','Saúde','Vestuário','Lazer','Outros pessoais'];
   const INCOME_CATEGORIES = ['Salário','Renda extra','Outras entradas'];
   const COLORS = ['#FFB453','#9D84FF','#FFE071','#4ED5F1','#4EE0AE','#FF8678','#D78BFF','#FF679A','#6AAEFF','#F0D173','#A7B8D8'];
@@ -98,11 +100,11 @@
   }
   function parseShoppingList(row,i){
     let items=[];try{const parsed=JSON.parse(row[4]||'[]');if(Array.isArray(parsed))items=parsed.map(item=>({id:String(item.id||makeId()),name:String(item.name||''),qty:Number(item.qty??1),unitCents:item.unitCents===null||item.unitCents===undefined?null:Number(item.unitCents),bought:Boolean(item.bought)})).slice(0,100);}catch{}
-    return {row:i+2,id:String(row[0]||''),title:String(row[1]||''),date:String(row[2]||''),status:String(row[3]||'Planejada'),items,expenseId:String(row[5]||''),updated:String(row[6]||''),createdBy:String(row[7]||''),payer:String(row[8]||''),payment:String(row[9]||''),purchasedDate:String(row[10]||'')};
+    return {row:i+2,id:String(row[0]||''),title:String(row[1]||''),date:String(row[2]||''),status:String(row[3]||'Planejada'),items,expenseId:String(row[5]||''),updated:String(row[6]||''),createdBy:String(row[7]||''),payer:String(row[8]||''),payment:String(row[9]||''),purchasedDate:String(row[10]||''),category:normalizePurchaseType(String(row[11]||''))};
   }
   async function loadShoppingLists(){
     await loadSheetTabId();if(shoppingSheetTabId===null)throw Error('A aba ListasCompras não foi encontrada na Planilha Google.');
-    const data=await googleRequest(`${shoppingRangeURL('A2:K')}?valueRenderOption=UNFORMATTED_VALUE`);
+    const data=await googleRequest(`${shoppingRangeURL('A2:L')}?valueRenderOption=UNFORMATTED_VALUE`);
     shoppingLists=(data.values||[]).map(parseShoppingList).filter(list=>list.id).sort((a,b)=>b.updated.localeCompare(a.updated));
     if(shoppingDraft&&!shoppingDirty&&!shoppingEditingFinalized){const found=shoppingLists.find(item=>item.id===shoppingDraft.id);if(found)shoppingDraft={...found,items:found.items.map(item=>({...item}))};}
     if(page==='shopping')renderShopping();
@@ -353,16 +355,29 @@
     const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
     const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const weekStart=localDate(monday),weekEnd=localDate(sunday),period=today.slice(0,7);
-    const paid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&['Mercado','Alimentação'].includes(e.category)&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
-    const weekSpent=paid.filter(e=>e.due>=weekStart&&e.due<=weekEnd).reduce((sum,e)=>sum+e.cents,0);
-    const monthSpent=paid.filter(e=>e.due.startsWith(period)).reduce((sum,e)=>sum+e.cents,0);
-    return {period,weekStart,weekEnd,weekSpent,monthSpent};
+    // Cada despesa paga entra uma única vez no resumo. Registros antigos de
+    // Mercado/Alimentação pertencem à categoria Mercado e cozinha.
+    const allPaid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
+    const asType=category=>['Mercado','Alimentação','Mercado e cozinha'].includes(category)?'Mercado e cozinha':PURCHASE_TYPES.includes(category)?category:null;
+    const inScope=allPaid.filter(e=>asType(e.category)!==null);
+    const weekly=inScope.filter(e=>e.due>=weekStart&&e.due<=weekEnd);
+    const monthly=inScope.filter(e=>e.due.startsWith(period));
+    const weeklyByType=Object.fromEntries(PURCHASE_TYPES.map(type=>[type,weekly.filter(e=>asType(e.category)===type).reduce((sum,e)=>sum+e.cents,0)]));
+    const weekAll=weekly.reduce((sum,e)=>sum+e.cents,0),monthAll=monthly.reduce((sum,e)=>sum+e.cents,0);
+    const weekSpent=weeklyByType['Mercado e cozinha'];
+    const monthSpent=monthly.filter(e=>asType(e.category)==='Mercado e cozinha').reduce((sum,e)=>sum+e.cents,0);
+    return {period,weekStart,weekEnd,weekSpent,monthSpent,weeklyByType,weekAll,monthAll};
   }
   function renderFoodBudget(){
     const budget=foodBudgetSnapshot(entries);
     $('#foodBudgetPeriod').textContent=monthLabel(budget.period);
     const shortDate=iso=>new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     $('#foodWeekDates').textContent=`${shortDate(budget.weekStart)} a ${shortDate(budget.weekEnd)}`;
+    $('#purchaseWeekTotal').textContent=money(budget.weekAll);
+    $('#purchaseMonthTotal').textContent=money(budget.monthAll);
+    for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining']]){
+      $('#'+id).textContent=money(budget.weeklyByType[category]);
+    }
     for(const [prefix,spent,limit] of [['Week',budget.weekSpent,FOOD_WEEK_LIMIT],['Month',budget.monthSpent,FOOD_MONTH_LIMIT]]){
       $(`#food${prefix}Spent`).textContent=money(spent);
       const remaining=limit-spent,label=$(`#food${prefix}Remaining`),bar=$(`#food${prefix}Bar`);
@@ -393,7 +408,7 @@
   function shoppingNewList(){
     if(shoppingSaving)return false;
     if(shoppingDirty&&!confirm('Descartar as alterações não salvas da compra atual?'))return false;
-    shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO()};
+    shoppingDraft={row:null,id:makeId(),title:'Compra no mercado',date:nowISO(),status:'Planejada',items:[blankShoppingItem()],expenseId:'',updated:'',createdBy:profile?.email||'',payer:isYashaAccount()?'Yasha':'Crispim',payment:'',purchasedDate:nowISO(),category:'Mercado e cozinha'};
     // Abrir o formulário vazio não equivale a alterar uma compra.
     shoppingEditingFinalized=false;shoppingEditSnapshot=null;
     shoppingDirty=false;shoppingRevision++;
@@ -450,9 +465,10 @@
     if(page==='shopping')navigateTo('shopping','shopping-new');
     toast('Novo registro criado com os produtos da compra anterior. Confira os valores e salve.');
   }
-  function shoppingRow(list){return [list.id,list.title,list.date,list.status,JSON.stringify(list.items),list.expenseId||'',list.updated||new Date().toISOString(),list.createdBy||profile.email,list.payer||'',list.payment||'',list.purchasedDate||''];}
+  function shoppingRow(list){return [list.id,list.title,list.date,list.status,JSON.stringify(list.items),list.expenseId||'',list.updated||new Date().toISOString(),list.createdBy||profile.email,list.payer||'',list.payment||'',list.purchasedDate||'',normalizePurchaseType(list.category)];}
   function validateShopping(list){
     if(!list||!list.title.trim()||list.title.length>100||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(list.date))throw Error('Informe a identificação da compra e a data do cadastro.');
+    if(!PURCHASE_TYPES.includes(list.category))throw Error('Selecione um tipo de compra válido.');
     if(list.items.length>100)throw Error('Cada compra permite até 100 produtos. Crie outro registro para os demais.');
     for(const item of list.items){
       if(!item.name.trim())continue;
@@ -464,7 +480,7 @@
     if(!shoppingDraft||shoppingSaving)return false;
     if(shoppingDraft.status==='Finalizada')throw Error('Uma compra registrada não pode ser alterada nesta tela. Reutilize os produtos em um novo registro.');
     const list=cloneShopping(shoppingDraft);list.title=$('#shoppingTitle').value.trim();list.date=$('#shoppingDate').value;
-    list.payer=$('#shoppingPayer').value;list.payment=$('#shoppingPayment').value;list.purchasedDate=$('#shoppingPurchaseDate').value;
+    list.payer=$('#shoppingPayer').value;list.payment=$('#shoppingPayment').value;list.purchasedDate=$('#shoppingPurchaseDate').value;list.category=$('#shoppingCategory').value;
     list.items=list.items.filter(item=>item.name.trim()).map(item=>({...item,bought:true}));validateShopping(list);
     list.updated=new Date().toISOString();shoppingSaving=true;
     const revision=shoppingRevision;
@@ -478,14 +494,14 @@
         if(found>=0)row=found+2;
       }
       if(row){
-        const current=await googleRequest(`${shoppingRangeURL(`A${row}:K${row}`)}?valueRenderOption=UNFORMATTED_VALUE`);
+        const current=await googleRequest(`${shoppingRangeURL(`A${row}:L${row}`)}?valueRenderOption=UNFORMATTED_VALUE`);
         const currentData=current.values?.[0];
         if(!currentData||String(currentData[0])!==list.id)throw Error('Este registro mudou de posição na planilha. Atualize as compras antes de salvar.');
         if(String(currentData[3]||'')==='Finalizada'||String(currentData[5]||''))throw Error('Esta compra já foi registrada em outro dispositivo. Atualize as compras.');
         if(list.row&&String(currentData[6]||'')!==String(shoppingDraft.updated||''))throw Error('Esta compra foi alterada em outro dispositivo. Atualize os registros para não sobrescrever os dados da família.');
-        await googleRequest(`${shoppingRangeURL(`A${row}:K${row}`)}?valueInputOption=RAW`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
+        await googleRequest(`${shoppingRangeURL(`A${row}:L${row}`)}?valueInputOption=RAW`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
       }else{
-        const response=await googleRequest(`${shoppingRangeURL('A:K')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
+        const response=await googleRequest(`${shoppingRangeURL('A:L')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({majorDimension:'ROWS',values:[shoppingRow(list)]})});
         const match=String(response?.updates?.updatedRange||'').match(/![A-Z]+(\d+):/);if(!match)throw Error('O registro foi enviado, mas não foi possível confirmar a linha. Atualize antes de tentar novamente.');
         row=Number(match[1]);
       }
@@ -510,6 +526,7 @@
   list.payer=$('#shoppingPayer').value;
   list.payment=$('#shoppingPayment').value;
   list.purchasedDate=$('#shoppingPurchaseDate').value;
+  list.category=$('#shoppingCategory').value;
   list.items=list.items.filter(item=>item.name.trim()).map(item=>({...item,bought:true}));
   try{
     validateShopping(list);
@@ -525,12 +542,13 @@
     await loadSheetTabId();
     if(shoppingSheetTabId===null)throw Error('A aba ListasCompras não está disponível.');
     const [liveListResponse,liveEntriesResponse]=await Promise.all([
-      googleRequest(`${shoppingRangeURL(`A${list.row}:K${list.row}`)}?valueRenderOption=UNFORMATTED_VALUE`),
+      googleRequest(`${shoppingRangeURL(`A${list.row}:L${list.row}`)}?valueRenderOption=UNFORMATTED_VALUE`),
       googleRequest(`${rangeURL('A2:S')}?valueRenderOption=UNFORMATTED_VALUE`)
     ]);
     const liveList=liveListResponse.values?.[0];
     if(!liveList||String(liveList[0]||'')!==original.id||String(liveList[3]||'')!=='Finalizada'||String(liveList[5]||'')!==original.expenseId)throw Error('O registro da compra mudou. Atualize o histórico antes de salvar.');
     if(String(liveList[6]||'')!==String(original.updated||''))throw Error('Esta compra foi alterada em outro dispositivo. Atualize o histórico para evitar sobrescrita.');
+    if(normalizePurchaseType(String(liveList[11]||''))!==normalizePurchaseType(original.category))throw Error('O tipo da compra foi alterado em outro dispositivo. Atualize o histórico antes de salvar.');
     for(const column of [1,2,8,9,10]){
       const expected=shoppingRow(original)[column];
       if(String(liveList[column]??'')!==String(expected??''))throw Error('Esta compra foi modificada fora do site. Atualize o histórico antes de editar.');
@@ -542,14 +560,15 @@
     const matches=(liveEntriesResponse.values||[]).map((row,index)=>({row,rowNumber:index+2})).filter(value=>String(value.row[0]||'')===original.expenseId);
     if(matches.length!==1)throw Error('Não foi possível localizar uma única despesa vinculada. Nenhuma alteração foi salva.');
     const {row:liveExpense,rowNumber}=matches[0];
-    if(String(liveExpense[2]||'')!=='Saída'||String(liveExpense[3]||'')!=='Mercado')throw Error('A despesa vinculada foi modificada. Confira o extrato antes de editar a compra.');
+    if(String(liveExpense[2]||'')!=='Saída'||String(liveExpense[3]||'')!==previous.category)throw Error('A despesa vinculada foi modificada. Confira o extrato antes de editar a compra.');
     if(Math.round(Number(liveExpense[4]||0)*100)!==previous.cents||String(liveExpense[1]||'')!==previous.description||String(liveExpense[6]||'')!==previous.due||String(liveExpense[14]||'')!==previous.payer||String(liveExpense[15]||'')!==previous.payment||String(liveExpense[18]||'')!==previous.quantity||String(liveExpense[7]||'')!==previous.status)throw Error('A despesa foi modificada em outro dispositivo. Atualize o site antes de salvar.');
     list.updated=new Date().toISOString();
     const line=rowNumber-1;
     const patch=(startColumnIndex,values)=>({updateCells:{range:{sheetId:sheetTabId,startRowIndex:line,endRowIndex:line+1,startColumnIndex,endColumnIndex:startColumnIndex+values.length},rows:[{values:values.map(sheetCell)}],fields:'userEnteredValue'}});
     const requests=[
-      {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(list).map(sheetCell)}],fields:'userEnteredValue'}},
+      {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:12},rows:[{values:shoppingRow(list).map(sheetCell)}],fields:'userEnteredValue'}},
       patch(1,[`Compra — ${list.title}`]),
+      patch(3,[list.category]),
       patch(4,[actual/100]),
       patch(6,[list.purchasedDate]),
       patch(14,[list.payer,list.payment]),
@@ -614,15 +633,15 @@
     for(const list of shoppingLists){
       const {named,bought,estimated}=shoppingTotals(list),button=createCell('button',null,`shopping-list-card${shoppingDraft?.id===list.id?' selected':''}`);button.type='button';
       const title=createCell('strong',list.title),badge=createCell('span',list.status==='Finalizada'?'✓ Registrada':`${named.length} ${named.length===1?'produto':'produtos'}`,'shopping-list-badge');
-      const meta=createCell('small',`${dateLabel(list.status==='Finalizada'?(list.purchasedDate||list.date):list.date)} · ${money(estimated)}`);
+      const meta=createCell('small',`${normalizePurchaseType(list.category)} · ${dateLabel(list.status==='Finalizada'?(list.purchasedDate||list.date):list.date)} · ${money(estimated)}`);
       button.append(title,badge,meta);button.addEventListener('click',()=>shoppingSelect(list.id));rail.append(button);
     }
     $('#shoppingEmpty').classList.toggle('hidden',Boolean(shoppingDraft));$('#shoppingWorkspace').classList.toggle('hidden',!shoppingDraft);
     if(!shoppingDraft)return;
     const list=shoppingDraft,editing=shoppingEditingFinalized&&list.status==='Finalizada',locked=shoppingSaving||(list.status==='Finalizada'&&!editing);
-    $('#shoppingTitle').value=list.title;$('#shoppingDate').value=list.date;$('#shoppingPayer').value=list.payer||'';
+    $('#shoppingTitle').value=list.title;$('#shoppingDate').value=list.date;$('#shoppingCategory').value=normalizePurchaseType(list.category);$('#shoppingPayer').value=list.payer||'';
     $('#shoppingPayment').value=list.payment||'';$('#shoppingPurchaseDate').value=list.purchasedDate||nowISO();
-    for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked||(id==='shoppingDate'&&list.status==='Finalizada');
+    for(const id of ['shoppingTitle','shoppingDate','shoppingCategory','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])$(`#${id}`).disabled=locked||(id==='shoppingDate'&&list.status==='Finalizada');
   $('#shoppingAddItem').disabled=locked;$('#shoppingSave').disabled=locked;$('#shoppingFinish').disabled=locked||editing;
   $('#shoppingDuplicate').disabled=shoppingSaving;
   $('#shoppingEdit').classList.toggle('hidden',list.status!=='Finalizada'||editing);
@@ -654,18 +673,18 @@
       await loadSheetTabId();
       // Revalidar os IDs diretamente na planilha impede repetição por atualização de página/reenvio.
       const [liveLists,liveExpenses]=await Promise.all([
-        googleRequest(`${shoppingRangeURL(`A${list.row}:K${list.row}`)}?valueRenderOption=UNFORMATTED_VALUE`),
+        googleRequest(`${shoppingRangeURL(`A${list.row}:L${list.row}`)}?valueRenderOption=UNFORMATTED_VALUE`),
         googleRequest(`${rangeURL('A2:A')}?valueRenderOption=UNFORMATTED_VALUE`)
       ]);
       const live=liveLists.values?.[0];
       if(!live||String(live[0])!==list.id||String(live[3])==='Finalizada'||String(live[5]||''))throw Error('Esta lista já foi finalizada ou mudou no Google. Atualize as listas antes de continuar.');
       const expenseId=`compra-${list.id}`;
       if((liveExpenses.values||[]).some(values=>String(values[0])===expenseId))throw Error('Esta compra já tem um lançamento. Atualize a página para evitar duplicação.');
-      const timestamp=new Date().toISOString(),record=[expenseId,`Compra — ${list.title}`,'Saída','Mercado',actual/100,nowISO(),list.purchasedDate,'Pago','','','','Não',profile.email,timestamp,list.payer,list.payment,'Casa','',`${bought.length} ${bought.length===1?'item':'itens'}`];
+      const timestamp=new Date().toISOString(),record=[expenseId,`Compra — ${list.title}`,'Saída',list.category,actual/100,nowISO(),list.purchasedDate,'Pago','','','','Não',profile.email,timestamp,list.payer,list.payment,'Casa','',`${bought.length} ${bought.length===1?'item':'itens'}`];
       const finished={...list,status:'Finalizada',expenseId,updated:timestamp};
       const requests=[
         {appendCells:{sheetId:sheetTabId,rows:[{values:record.map(sheetCell)}],fields:'userEnteredValue'}},
-        {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:11},rows:[{values:shoppingRow(finished).map(sheetCell)}],fields:'userEnteredValue'}}
+        {updateCells:{range:{sheetId:shoppingSheetTabId,startRowIndex:list.row-1,endRowIndex:list.row,startColumnIndex:0,endColumnIndex:12},rows:[{values:shoppingRow(finished).map(sheetCell)}],fields:'userEnteredValue'}}
       ];
       await googleRequest(`${API}/${encodeURIComponent(CONFIG.SPREADSHEET_ID)}:batchUpdate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests})});
       shoppingDraft=cloneShopping(finished);shoppingDirty=false;
@@ -1026,13 +1045,13 @@
     // O evento change da data e dos seletores deve marcar o rascunho como alterado.
     function updateShoppingField(id){
       if(!shoppingDraft||shoppingSaving||(shoppingDraft.status==='Finalizada'&&!shoppingEditingFinalized))return;
-      const key=id==='shoppingTitle'?'title':id==='shoppingDate'?'date':id==='shoppingPayer'?'payer':id==='shoppingPayment'?'payment':'purchasedDate';
+      const key=id==='shoppingTitle'?'title':id==='shoppingDate'?'date':id==='shoppingPayer'?'payer':id==='shoppingPayment'?'payment':id==='shoppingCategory'?'category':'purchasedDate';
       const value=document.getElementById(id).value;
       if(shoppingDraft[key]===value)return;
       shoppingDraft[key]=value;
       shoppingChanged();
     }
-    for(const id of ['shoppingTitle','shoppingDate','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])
+    for(const id of ['shoppingTitle','shoppingDate','shoppingCategory','shoppingPayer','shoppingPayment','shoppingPurchaseDate'])
       document.getElementById(id).addEventListener('change',()=>updateShoppingField(id));
     $('#shoppingTitle').addEventListener('input',()=>updateShoppingField('shoppingTitle'));
     $('#shoppingSave').addEventListener('click',()=>shoppingEditingFinalized?shoppingSaveCompleted():shoppingSave().catch(()=>{}));
