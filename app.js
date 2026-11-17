@@ -351,10 +351,11 @@
   const FOOD_WEEK_LIMIT=25000,FOOD_MONTH_LIMIT=100000;
   function foodBudgetSnapshot(records,today=nowISO()){
     const date=new Date(`${today}T12:00:00`);
-    const monday=new Date(date);monday.setDate(date.getDate()-((date.getDay()+6)%7));
-    const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+    // Semana financeira: domingo (inclusive) até sábado (inclusive).
+    const sunday=new Date(date);sunday.setDate(date.getDate()-date.getDay());
+    const saturday=new Date(sunday);saturday.setDate(sunday.getDate()+6);
     const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const weekStart=localDate(monday),weekEnd=localDate(sunday),period=today.slice(0,7);
+    const weekStart=localDate(sunday),weekEnd=localDate(saturday),period=today.slice(0,7);
     // Cada despesa paga entra uma única vez no resumo. Registros antigos de
     // Mercado/Alimentação pertencem à categoria Mercado e cozinha.
     const allPaid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
