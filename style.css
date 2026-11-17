@@ -490,3 +490,17 @@ body.motion-disabled .route-curtain{display:none!important}
 .purchase-weekly-note{margin:14px 0 0}
 @media(max-width:950px){.purchase-weekly-categories{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.purchase-weekly-head{align-items:stretch;flex-direction:column}.purchase-weekly-total{min-width:0}.purchase-weekly-categories{grid-template-columns:repeat(2,minmax(0,1fr))}.purchase-weekly-categories article{padding:11px}.purchase-weekly-categories article strong{font-size:17px}.shopping-category-field{max-width:none;margin:-4px 0 20px}}
+
+/* Seletor de semanas do mês, com indicação de semana ativa */
+.purchase-week-selector{margin:0 0 19px;padding:14px 16px 16px;background:#0f292d9c;border:1px solid #3b625c;border-radius:16px}
+.purchase-week-selector-head{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:12px}
+.purchase-week-selector-head small{font-size:11px;color:#aecac1}
+.purchase-week-buttons{display:flex;flex-wrap:wrap;gap:9px}
+.purchase-week-tab{appearance:none;background:#172f38;color:#c8ded9;border:1px solid #456b67;border-radius:11px;padding:11px 15px;min-width:115px;display:flex;flex:1 1 116px;max-width:220px;flex-direction:column;text-align:left;gap:4px;cursor:pointer;transition:background .17s,border-color .17s,color .17s,box-shadow .17s}
+.purchase-week-tab strong{font-family:Outfit,'DM Sans',sans-serif;font-size:14px;font-weight:750}
+.purchase-week-tab small{font-size:10px;color:#a6c8c3}
+.purchase-week-tab:hover{border-color:#a0dba6;background:#244640}
+.purchase-week-tab.active{background:#305848;border-color:#b9ef9c;color:#ecffdc;box-shadow:0 0 0 1px #b5ea962e inset}
+.purchase-week-tab.active small{color:#d4f3d1}
+.purchase-week-tab:focus-visible{outline:2px solid #d1f3b2;outline-offset:3px}
+@media(max-width:650px){.purchase-week-selector{padding:12px}.purchase-week-selector-head{flex-direction:column;align-items:flex-start;gap:5px}.purchase-week-tab{flex:1 1 calc(50% - 7px);max-width:none;min-width:0;padding:10px 12px}.purchase-week-buttons{gap:8px}}

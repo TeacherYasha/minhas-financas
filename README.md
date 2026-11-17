@@ -92,3 +92,8 @@ A navegação lateral possui um destaque deslizante e resposta visual ao toque. 
 ## Estado atual
 
 O site está publicado no GitHub Pages e o login com Google foi testado pelo proprietário. Os três e-mails da família estão autorizados na planilha e no site; os outros acessos permanecem bloqueados. Os dados anteriores e os registros históricos devem ser mantidos sem duplicação.
+
+
+### Consulta de semanas no orçamento de compras
+
+Em **Registro de compras**, o painel possui botões de **1ª semana**, **2ª semana** e assim por diante, conforme a quantidade de semanas que tocam o mês atual (inclusive a 5ª ou 6ª quando houver). Cada semana vai de **domingo a sábado**. A seleção altera tanto o valor do teto semanal de R$ 250 quanto o detalhamento de **Mercado e cozinha, Saúde, Lanches e Refeição fora**, além do total geral semanal. O **total mensal** e o teto de R$ 1.000 permanecem ancorados no mês atual e não mudam ao trocar de semana. Semanas nas bordas do mês podem começar no mês anterior ou terminar no seguinte, sempre respeitando domingo a sábado. A semana corrente aparece inicialmente selecionada, mas o usuário pode consultar as anteriores sem modificar registros.

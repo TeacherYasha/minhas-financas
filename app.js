@@ -51,6 +51,7 @@
   let token = '', tokenExpires = 0, profile = null, oauthClient = null, entries = [], shoppingLists = [], shoppingDraft = null, shoppingDirty = false, shoppingSaving = false, shoppingRevision = 0, shoppingSaveTimer = null, shoppingSheetTabId = null, page = 'overview', entryFilter = 'all', month = currentMonth(), entryKind = 'Saída', editingId = null, sheetTabId = null, isBusy = false, initialMonthResolved = false, navSequence = 0, navSwapTimer = null, navCleanTimer = null, navDetailTimer = null;
   let incomeView='all',shoppingView='overview',navSelection='overview';
   let shoppingEditingFinalized=false,shoppingEditSnapshot=null;
+  let selectedPurchaseWeek=null,selectedPurchaseWeekManual=false;
 
   function toast(message,isError=false) { const el=$('#toast');el.textContent=message;el.className=`toast visible${isError?' error':''}`;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),5200); }
   function setBusy(value) {isBusy=value;$('#saveEntry').disabled=value;$('#saveEntry').textContent=value?'Salvando...':editingId?'Salvar alterações':'Salvar lançamento';}
@@ -349,13 +350,30 @@
     $('#category').value=INCOME_CATEGORIES.includes(category)?category:'Outras entradas';
   }
   const FOOD_WEEK_LIMIT=25000,FOOD_MONTH_LIMIT=100000;
-  function foodBudgetSnapshot(records,today=nowISO()){
-    const date=new Date(`${today}T12:00:00`);
-    // Semana financeira: domingo (inclusive) até sábado (inclusive).
-    const sunday=new Date(date);sunday.setDate(date.getDate()-date.getDay());
-    const saturday=new Date(sunday);saturday.setDate(sunday.getDate()+6);
-    const localDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const weekStart=localDate(sunday),weekEnd=localDate(saturday),period=today.slice(0,7);
+  const isoLocalDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const sundayOf=iso=>{
+    const date=new Date(`${iso}T12:00:00`);
+    date.setDate(date.getDate()-date.getDay());
+    return isoLocalDate(date);
+  };
+  function purchaseWeeksForMonth(period){
+    const [year,month]=period.split('-').map(Number);
+    const first= `${period}-01`;
+    const last=isoLocalDate(new Date(year,month,0,12));
+    const weeks=[];
+    let cursor=new Date(`${sundayOf(first)}T12:00:00`);
+    while(isoLocalDate(cursor)<=last){
+      const saturday=new Date(cursor);saturday.setDate(cursor.getDate()+6);
+      weeks.push({start:isoLocalDate(cursor),end:isoLocalDate(saturday)});
+      cursor.setDate(cursor.getDate()+7);
+    }
+    return weeks;
+  }
+  function foodBudgetSnapshot(records,today=nowISO(),selectedWeek=null){
+    // Mantém o período do mês independente da semana selecionada.
+    const weekStart=selectedWeek||sundayOf(today);
+    const saturday=new Date(`${weekStart}T12:00:00`);saturday.setDate(saturday.getDate()+6);
+    const weekEnd=isoLocalDate(saturday),period=today.slice(0,7);
     // Cada despesa paga entra uma única vez no resumo. Registros antigos de
     // Mercado/Alimentação pertencem à categoria Mercado e cozinha.
     const allPaid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
@@ -370,10 +388,36 @@
     return {period,weekStart,weekEnd,weekSpent,monthSpent,weeklyByType,weekAll,monthAll};
   }
   function renderFoodBudget(){
-    const budget=foodBudgetSnapshot(entries);
+    const today=nowISO();
+    const weeks=purchaseWeeksForMonth(today.slice(0,7));
+    const currentWeek=sundayOf(today);
+    if(!selectedPurchaseWeekManual||!weeks.some(week=>week.start===selectedPurchaseWeek)){
+      selectedPurchaseWeek=weeks.some(week=>week.start===currentWeek)?currentWeek:weeks[0].start;
+      selectedPurchaseWeekManual=false;
+    }
+    const budget=foodBudgetSnapshot(entries,today,selectedPurchaseWeek);
     $('#foodBudgetPeriod').textContent=monthLabel(budget.period);
     const shortDate=iso=>new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     $('#foodWeekDates').textContent=`${shortDate(budget.weekStart)} a ${shortDate(budget.weekEnd)}`;
+    const weekButtons=$('#purchaseWeekButtons');
+    weekButtons.replaceChildren();
+    weeks.forEach((week,index)=>{
+      const button=createCell('button',null,'purchase-week-tab');
+      button.type='button';
+      const selected=week.start===selectedPurchaseWeek;
+      button.classList.toggle('active',selected);
+      button.setAttribute('aria-pressed',String(selected));
+      button.setAttribute('aria-label',`${index+1}ª semana, de ${shortDate(week.start)} a ${shortDate(week.end)}`);
+      const name=createCell('strong',`${index+1}ª semana`);
+      const dates=createCell('small',`${shortDate(week.start)}–${shortDate(week.end)}`);
+      button.append(name,dates);
+      button.addEventListener('click',()=>{
+        selectedPurchaseWeek=week.start;
+        selectedPurchaseWeekManual=true;
+        renderFoodBudget();
+      });
+      weekButtons.append(button);
+    });
     $('#purchaseWeekTotal').textContent=money(budget.weekAll);
     $('#purchaseMonthTotal').textContent=money(budget.monthAll);
     for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining']]){
