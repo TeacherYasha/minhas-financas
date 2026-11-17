@@ -7,7 +7,7 @@
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   const API = 'https://sheets.googleapis.com/v4/spreadsheets';
   const SHOPPING_TAB = 'ListasCompras';
-  const PURCHASE_TYPES = ['Mercado e cozinha','Saúde','Lanches','Refeição fora'];
+  const PURCHASE_TYPES = ['Mercado e cozinha','Saúde','Lanches','Refeição fora','Outros'];
   const normalizePurchaseType = value => PURCHASE_TYPES.includes(value) ? value : 'Mercado e cozinha';
   const MONTHLY_BILL_COUNT = 24;
   const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
@@ -377,14 +377,21 @@
     // Cada despesa paga entra uma única vez no resumo. Registros antigos de
     // Mercado/Alimentação pertencem à categoria Mercado e cozinha.
     const allPaid=records.filter(e=>e.type==='Saída'&&e.status==='Pago'&&Number.isSafeInteger(e.cents)&&e.cents>=0&&/^\d{4}-\d{2}-\d{2}$/.test(e.due));
-    const asType=category=>['Mercado','Alimentação','Mercado e cozinha'].includes(category)?'Mercado e cozinha':PURCHASE_TYPES.includes(category)?category:null;
-    const inScope=allPaid.filter(e=>asType(e.category)!==null);
+    const asType=entry=>{
+      const category=entry.category;
+      // 'Outros' é uma categoria geral da casa também. Incluir apenas
+      // Outros registrados no Registro de compras, evitando gastos avulsos
+      // sem vínculo com compras inflarem o total do painel.
+      if(category==='Outros')return String(entry.id||'').startsWith('compra-')?'Outros':null;
+      return ['Mercado','Alimentação','Mercado e cozinha'].includes(category)?'Mercado e cozinha':PURCHASE_TYPES.includes(category)?category:null;
+    };
+    const inScope=allPaid.filter(e=>asType(e)!==null);
     const weekly=inScope.filter(e=>e.due>=weekStart&&e.due<=weekEnd);
     const monthly=inScope.filter(e=>e.due.startsWith(period));
-    const weeklyByType=Object.fromEntries(PURCHASE_TYPES.map(type=>[type,weekly.filter(e=>asType(e.category)===type).reduce((sum,e)=>sum+e.cents,0)]));
+    const weeklyByType=Object.fromEntries(PURCHASE_TYPES.map(type=>[type,weekly.filter(e=>asType(e)===type).reduce((sum,e)=>sum+e.cents,0)]));
     const weekAll=weekly.reduce((sum,e)=>sum+e.cents,0),monthAll=monthly.reduce((sum,e)=>sum+e.cents,0);
     const weekSpent=weeklyByType['Mercado e cozinha'];
-    const monthSpent=monthly.filter(e=>asType(e.category)==='Mercado e cozinha').reduce((sum,e)=>sum+e.cents,0);
+    const monthSpent=monthly.filter(e=>asType(e)==='Mercado e cozinha').reduce((sum,e)=>sum+e.cents,0);
     return {period,weekStart,weekEnd,weekSpent,monthSpent,weeklyByType,weekAll,monthAll};
   }
   function renderFoodBudget(){
@@ -420,7 +427,7 @@
     });
     $('#purchaseWeekTotal').textContent=money(budget.weekAll);
     $('#purchaseMonthTotal').textContent=money(budget.monthAll);
-    for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining']]){
+    for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining'],['Outros','purchaseWeekOther']]){
       $('#'+id).textContent=money(budget.weeklyByType[category]);
     }
     for(const [prefix,spent,limit] of [['Week',budget.weekSpent,FOOD_WEEK_LIMIT],['Month',budget.monthSpent,FOOD_MONTH_LIMIT]]){
