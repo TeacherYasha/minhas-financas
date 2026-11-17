@@ -480,13 +480,13 @@ body.motion-disabled .route-curtain{display:none!important}
 .purchase-weekly-total small{font-size:10px;letter-spacing:.075em;font-weight:750;color:#b9d7ca}
 .purchase-weekly-total strong{font:700 27px Outfit,'DM Sans',sans-serif;color:#c7f6b3}
 .purchase-weekly-total span{font-size:11px;color:#c5dad6}
-.purchase-weekly-categories{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.purchase-weekly-categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .purchase-weekly-categories article{min-width:0;display:flex;flex-direction:column;gap:12px;border:1px solid #41615b;border-radius:13px;background:#102832a8;padding:14px}
 .purchase-weekly-categories article>span{font-size:12px;font-weight:700;color:#d4e6df;display:flex;align-items:center;gap:8px}
 .purchase-weekly-categories article strong{font-family:Outfit,'DM Sans',sans-serif;font-size:21px;color:#f0fff1;overflow-wrap:anywhere}
 .purchase-type-dot{width:9px;height:9px;flex:none;border-radius:50%;display:inline-block}
 .purchase-type-dot.market{background:#b4eb87}.purchase-type-dot.health{background:#81c7f1}
-.purchase-type-dot.snacks{background:#ffcd87}.purchase-type-dot.dining{background:#d6b0f4}.purchase-type-dot.other{background:#9eafb9}
+.purchase-type-dot.snacks{background:#ffcd87}.purchase-type-dot.dining{background:#d6b0f4}.purchase-type-dot.other{background:#9eafb9}.purchase-type-dot.moto{background:#f3a66d}
 .purchase-weekly-note{margin:14px 0 0}
 @media(max-width:950px){.purchase-weekly-categories{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.purchase-weekly-head{align-items:stretch;flex-direction:column}.purchase-weekly-total{min-width:0}.purchase-weekly-categories{grid-template-columns:repeat(2,minmax(0,1fr))}.purchase-weekly-categories article{padding:11px}.purchase-weekly-categories article strong{font-size:17px}.shopping-category-field{max-width:none;margin:-4px 0 20px}}
@@ -504,3 +504,5 @@ body.motion-disabled .route-curtain{display:none!important}
 .purchase-week-tab.active small{color:#d4f3d1}
 .purchase-week-tab:focus-visible{outline:2px solid #d1f3b2;outline-offset:3px}
 @media(max-width:650px){.purchase-week-selector{padding:12px}.purchase-week-selector-head{flex-direction:column;align-items:flex-start;gap:5px}.purchase-week-tab{flex:1 1 calc(50% - 7px);max-width:none;min-width:0;padding:10px 12px}.purchase-week-buttons{gap:8px}}
+
+.shopping-category-help{color:#9fbeb7;font-size:11px;font-weight:500;line-height:1.45;margin-top:-2px}

@@ -9,10 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261117-35" />
+  <link rel="stylesheet" href="style.css?v=20261117-36" />
   <script src="config.js?v=20261109-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="app.js?v=20261117-35" defer></script>
+  <script src="app.js?v=20261117-36" defer></script>
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -129,8 +129,9 @@
                 <article><span><i class="purchase-type-dot snacks"></i>Lanches</span><strong id="purchaseWeekSnacks">R$ 0,00</strong></article>
                 <article><span><i class="purchase-type-dot dining"></i>Refeição fora</span><strong id="purchaseWeekDining">R$ 0,00</strong></article>
                 <article><span><i class="purchase-type-dot other"></i>Outros</span><strong id="purchaseWeekOther">R$ 0,00</strong></article>
+                <article><span><i class="purchase-type-dot moto"></i>Moto</span><strong id="purchaseWeekMoto">R$ 0,00</strong></article>
               </div>
-              <p class="purchase-weekly-note">O total geral inclui as cinco categorias. Apenas Mercado e cozinha entra no limite de R$ 250 por semana e R$ 1.000 por mês. A categoria Outros fica fora desses limites.</p>
+              <p class="purchase-weekly-note">O total geral inclui as seis categorias. Apenas Mercado e cozinha entra no limite de R$ 250 por semana e R$ 1.000 por mês. Moto e Outros não entram no teto do mercado. Lançamentos de gasolina já pagos também são somados em Moto.</p>
             </div>
           </section>
           <div class="shopping-layout">
@@ -139,7 +140,7 @@
               <div id="shoppingEmpty" class="shopping-placeholder"><span>🧺</span><h3>Registre uma compra que você já fez</h3><p>Informe os produtos comprados, as quantidades e os preços pagos. Tudo ficará organizado em um só registro.</p><button id="shoppingEmptyCreate" type="button" class="feature-action">＋ Cadastrar compra</button></div>
               <div id="shoppingWorkspace" class="hidden">
                 <div class="shopping-editor-top"><label>Identificação da compra<input id="shoppingTitle" maxlength="100" placeholder="Ex.: Mercado de sábado" /></label><label>Data do cadastro<input id="shoppingDate" type="date" /></label></div>
-                <label class="shopping-category-field">Tipo de compra<select id="shoppingCategory" aria-label="Tipo de compra"><option value="Mercado e cozinha">Mercado e cozinha</option><option value="Saúde">Saúde</option><option value="Lanches">Lanches</option><option value="Refeição fora">Refeição fora</option><option value="Outros">Outros</option></select></label>
+                <label class="shopping-category-field">Tipo de compra<select id="shoppingCategory" aria-label="Tipo de compra"><option value="Mercado e cozinha">Mercado e cozinha</option><option value="Saúde">Saúde</option><option value="Lanches">Lanches</option><option value="Refeição fora">Refeição fora</option><option value="Outros">Outros</option><option value="Moto">Moto</option></select><small class="shopping-category-help">Em Moto, registre gasolina, óleo, manutenção e possíveis reparos.</small></label>
                 <div class="shopping-items-title"><div><h3>Produtos comprados</h3><p>Informe os itens da compra realizada e os valores pagos.</p></div><span id="shoppingProgress">0 produtos</span></div>
                 <div class="shopping-items-table"><div class="shopping-items-head"><span>PRODUTO</span><span>QTD.</span><span>PREÇO PAGO/UN.</span><span>SUBTOTAL</span><span></span></div><div id="shoppingItems"></div></div>
                 <button type="button" id="shoppingAddItem" class="shopping-add-item">＋ Incluir produto comprado <span class="shopping-shortcut-hint">Atalho: Enter numérico ↵</span></button>

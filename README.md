@@ -102,3 +102,8 @@ Em **Registro de compras**, o painel possui botões de **1ª semana**, **2ª sem
 ### Categoria Outros nas compras
 
 Em Registro de compras → Nova compra ou Editar compra registrada, a categoria **Outros** é oferecida junto com Mercado e cozinha, Saúde, Lanches e Refeição fora. Compras finalizadas com essa categoria compõem o total geral semanal e mensal, e um card separado para Outros mostra o valor semanal. **Outros não consome o teto de R$ 250 semanais nem de R$ 1.000 mensais do mercado**. Lançamentos avulsos de despesas da categoria geral Outros (sem vínculo com uma compra) não entram automaticamente no resumo de compras. As compras antigas conservam a classificação e podem ser reclassificadas pela edição do histórico.
+
+
+### Categoria Moto
+
+Em Registro de compras, a categoria **Moto** agrupa gasolina, óleo, manutenção e reparos: os itens são descritos na lista de produtos da compra. Ela aparece como card próprio no resumo semanal por categorias e entra no total geral da semana e do mês, **sem consumir os limites de mercado de R$ 250 semanais e R$ 1.000 mensais**. Despesas já pagas e lançadas diretamente em **Contas → Gasolina** ou na categoria **Moto** também aparecem nesse resumo, sem precisar cadastrar a mesma despesa outra vez. Gastos pendentes ficam fora. Os registros anteriores não são reescritos.

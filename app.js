@@ -7,7 +7,7 @@
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile';
   const API = 'https://sheets.googleapis.com/v4/spreadsheets';
   const SHOPPING_TAB = 'ListasCompras';
-  const PURCHASE_TYPES = ['Mercado e cozinha','Saúde','Lanches','Refeição fora','Outros'];
+  const PURCHASE_TYPES = ['Mercado e cozinha','Saúde','Lanches','Refeição fora','Outros','Moto'];
   const normalizePurchaseType = value => PURCHASE_TYPES.includes(value) ? value : 'Mercado e cozinha';
   const MONTHLY_BILL_COUNT = 24;
   const LAST_ACCOUNT_KEY = 'minhas-financas:ultimo-email-google';
@@ -383,6 +383,9 @@
       // Outros registrados no Registro de compras, evitando gastos avulsos
       // sem vínculo com compras inflarem o total do painel.
       if(category==='Outros')return String(entry.id||'').startsWith('compra-')?'Outros':null;
+      // Gasolina já lançada em Contas faz parte da Moto sem exigir
+      // recadastro. Despesas Moto e compras Moto aparecem somente uma vez.
+      if(category==='Gasolina')return 'Moto';
       return ['Mercado','Alimentação','Mercado e cozinha'].includes(category)?'Mercado e cozinha':PURCHASE_TYPES.includes(category)?category:null;
     };
     const inScope=allPaid.filter(e=>asType(e)!==null);
@@ -427,7 +430,7 @@
     });
     $('#purchaseWeekTotal').textContent=money(budget.weekAll);
     $('#purchaseMonthTotal').textContent=money(budget.monthAll);
-    for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining'],['Outros','purchaseWeekOther']]){
+    for(const [category,id] of [['Mercado e cozinha','purchaseWeekMarket'],['Saúde','purchaseWeekHealth'],['Lanches','purchaseWeekSnacks'],['Refeição fora','purchaseWeekDining'],['Outros','purchaseWeekOther'],['Moto','purchaseWeekMoto']]){
       $('#'+id).textContent=money(budget.weeklyByType[category]);
     }
     for(const [prefix,spent,limit] of [['Week',budget.weekSpent,FOOD_WEEK_LIMIT],['Month',budget.monthSpent,FOOD_MONTH_LIMIT]]){
